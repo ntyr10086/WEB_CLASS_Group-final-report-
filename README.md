@@ -1,6 +1,6 @@
 # 災變大作戰：災難救援隊
 
-SDG 13 氣候行動・2～4 人即時合作的 2D 像素救災遊戲（玩法參考《Overcooked》）。
+SDG 13 氣候行動・2～4 人即時合作的 2D 像素救災遊戲。
 Flask + Flask-SocketIO（WebSocket）+ MongoDB + LangChain/OpenAI + Phaser 3。
 
 ## 玩法
@@ -197,11 +197,6 @@ WASD／方向鍵移動；空白鍵拿・放・交付，處理災情要「按住�
 | static/js/scene.js | Phaser 場景：地圖、角色、災情特效、天氣 |
 | static/js/main.js | 大廳、災情單 HUD、開場快報、結算 |
 
-## 部署到 Render
-
-Build：`pip install -r requirements.txt`
-Start：`gunicorn -w 1 --threads 100 app:app`（只能 1 個 worker，遊戲狀態在記憶體）
-環境變數：`SECRET_KEY`（登入用，請設一串很長的亂數，不要用預設值）、`MONGO_URI`、`OPENAI_API_KEY`、`AI_PROVIDER=openai`（Render 跑不動 Ollama）；MongoDB Atlas 的 Network Access 加入 `0.0.0.0/0`。
 
 ## 素材授權
 

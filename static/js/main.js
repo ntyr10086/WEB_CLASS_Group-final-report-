@@ -233,6 +233,7 @@ socket.on("room_update", (info) => {
   const isHost = info.host === myId;
   $("player-list").innerHTML = info.players.map((p) =>
     `<li>${face(p.skin)}<span>${escapeHtml(p.name)}</span>` +
+    (p.facility && SHOP.items[p.facility] ? `<span class="fac-chip">${icon2(SHOP.items[p.facility].icon)}${SHOP.items[p.facility].name}</span>` : "") +
     `<span class="tag">${p.id === info.host ? "房主" : ""}${p.id === myId ? "　你" : ""}</span></li>`).join("");
   $("btn-start").classList.toggle("hidden", !isHost || info.status !== "waiting" || !tutorialDone());
   $("btn-tutorial").classList.toggle("hidden", !isHost || info.status !== "waiting");
@@ -385,7 +386,7 @@ function updateHud(s) {
   document.body.dataset.disaster = s.disaster || "typhoon";      // 換災難：計量條名稱、顏色
   $("hud-meter").textContent = (MAP && MAP.disaster && MAP.disaster.meter) || "水位";
   $("hud-coins").textContent = s.coins;
-  $("hud-hearts").innerHTML = Array.from({ length: 5 }, (_, i) => icon("heart", i < s.hearts ? "" : "lost")).join("");
+  $("hud-hearts").innerHTML = Array.from({ length: s.max_hearts || 5 }, (_, i) => icon("heart", i < s.hearts ? "" : "lost")).join("");
   document.body.classList.toggle("danger", s.level >= 75 && playing);
   updateStoryTask(s.chapter);
 
@@ -548,8 +549,9 @@ socket.on("game_over", (r) => {
     `<span>${icon("coin")}<b>${r.coins}</b></span><span>解除 <b>${r.fixed}</b> 件</span>` +
     `<span>失敗 <b>${r.failed}</b> 件</span><span>${icon("heart")}<b>${r.hearts}</b></span>`;
   $("result-players").innerHTML = r.players.map((p) =>
-    `<li>${face(p.skin)}<span>${escapeHtml(p.name)}</span><span class="hint">治災 ${p.fixed}・運送 ${p.items}</span>` +
-    `<span class="title">${p.title}</span></li>`).join("");
+    `<li>${face(p.skin)}<span>${escapeHtml(p.name)}</span><span class="hint">治災 ${p.fixed}・運送 ${p.items}・防災基金 +${p.earned || 0}</span>` +
+    `<span class="title">${p.title}</span></li>`).join("") +
+    (r.facilities && r.facilities.length ? `<li class="fac-used">這局帶的防災建設：${r.facilities.map(escapeHtml).join("、")}</li>` : "");
   $("result-report").textContent = "鎮長正在想要說什麼…";
   $("result-story").innerHTML = (r.chapters || []).map((c) =>
     `<li class="${c.status}"><span class="ch-mark">${c.status === "done" ? "✓" : "✗"}</span>` +
@@ -747,3 +749,54 @@ $("btn-add-friend").onclick = async () => {
   if (ok) { $("friend-code").value = ""; $("friend-msg").textContent = `已經和 ${data.name} 成為好友！`; loadFriends(); }
 };
 $("friend-code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("btn-add-friend").click(); });
+
+
+// ── 局間防災建設：用防災基金蓋建設，每局開始前每人選一樣帶進場 ──────────
+const SHOP = { items: {}, fund: 0, owned: [], equipped: null };
+const icon2 = (file) => `<img class="px" src="${ASSET}items/${file}.png" alt="">`;
+function renderShop() {
+  $("shop-fund").textContent = SHOP.fund;
+  $("shop-list").innerHTML = Object.entries(SHOP.items).map(([id, it]) => {
+    const own = SHOP.owned.includes(id), on = SHOP.equipped === id;
+    const btn = !own ? `<button data-buy="${id}" ${SHOP.fund < it.price ? "disabled" : ""}>蓋　${it.price} 金幣</button>`
+      : on ? `<button data-equip="" class="on">帶著中 ✓</button>` : `<button data-equip="${id}">這局帶這個</button>`;
+    return `<li class="${own ? "own" : ""} ${on ? "on" : ""}">${icon2(it.icon)}<div><b>${it.name}</b>` +
+      `<span class="fac-desc">${it.desc}</span><span class="fac-why">${it.why}</span></div>${btn}</li>`;
+  }).join("");
+}
+function openShop() { $("shop-msg").textContent = ""; socket.emit("shop"); renderShop(); openModal("shop"); }
+$("btn-shop").onclick = openShop;
+$("btn-shop2").onclick = openShop;
+socket.on("shop", (d) => {
+  if (!d) return;
+  SHOP.fund = d.fund; SHOP.owned = d.owned; SHOP.equipped = d.equipped;
+  d.items.forEach((it) => { SHOP.items[it.id] = it; });
+  if (d.equipped) localStorage.setItem("fr-facility", d.equipped);
+  renderShop();
+});
+socket.on("shop_msg", (d) => {
+  $("shop-msg").textContent = d.message;
+  $("shop-msg").style.color = d.ok ? "var(--accent)" : "";
+});
+$("shop-list").onclick = (e) => {
+  const b = e.target.closest("button");
+  if (!b || b.disabled) return;
+  if (b.dataset.buy) socket.emit("buy", { item: b.dataset.buy });
+  else if ("equip" in b.dataset) {
+    localStorage.setItem("fr-facility", b.dataset.equip || "");
+    socket.emit("equip", { item: b.dataset.equip || null });
+  }
+};
+// 進房間：拿防災基金資料，並自動帶上次選的建設
+socket.on("joined", () => {
+  socket.emit("shop");
+  const last = localStorage.getItem("fr-facility");
+  if (last) socket.emit("equip", { item: last });
+});
+
+
+// 結算畫面「回到大廳」：離開這個房間，回到大廳（和設定裡的退出遊戲一樣）
+$("btn-result-lobby").onclick = () => {
+  quitToLobby();
+  socket.emit("leave_room");
+};

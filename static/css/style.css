@@ -661,3 +661,23 @@ body:has(#tutorial:not(.hidden)) .keys, body:has(#dialog-toast:not(.hidden)) .ke
   /* 標題不能換行：大小同時看畫面高度和寬度，取比較小的 */
   .lobby > h1 { white-space: nowrap; font-size: clamp(34px, min(11vh, 4.4vw), 110px); }
 }
+
+/* ── 防災建設 ── */
+.shop-btn { width: 100%; margin-bottom: 10px; background: #e3f6e8; font-size: 16px; }
+.fund { display: flex; align-items: center; gap: 6px; margin: 6px 0 10px; color: var(--muted); }
+.fund img { width: 20px; height: 20px; } .fund b { font-size: 22px; font-weight: normal; color: var(--ink); }
+.shop-list { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 8px; }
+.shop-list li { display: flex; align-items: center; gap: 10px; background: #fff; border: 2px solid var(--edge); border-radius: 4px; padding: 8px 10px; }
+.shop-list li.own { background: #f3fbf5; } .shop-list li.on { background: #e3f6e8; border-color: var(--accent); }
+.shop-list li > img { width: 32px; height: 32px; flex: none; }
+.shop-list li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.shop-list b { font-weight: normal; font-size: 16px; }
+.fac-desc { font-size: 13px; color: var(--ink); } .fac-why { font-size: 12px; color: var(--muted); }
+.shop-list button { flex: none; font-size: 14px; padding: 6px 10px; }
+.shop-list button.on { background: var(--accent); color: #fff; }
+.fac-chip { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 0 6px; font-size: 12px; background: #e3f6e8; border: 1px solid var(--accent); border-radius: 3px; }
+.fac-chip img { width: 14px; height: 14px; }
+.result-players li.fac-used { font-size: 13px; color: var(--accent); justify-content: center; }
+
+/* 結算畫面的「回到大廳」 */
+.result-lobby-btn { display: block; width: 100%; margin-top: 10px; background: #fff; font-size: 16px; }

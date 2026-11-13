@@ -53,6 +53,7 @@
         <p id="room-code" class="room-code">----</p>
         <ul id="player-list"></ul>
         <button id="btn-tutorial" class="tutorial-btn hidden">新手教學（第一次玩推薦！）</button>
+        <button id="btn-shop" class="shop-btn">防災建設（每人帶一樣進場）</button>
         <button id="btn-start" class="primary hidden">出發救災！</button>
         <p id="wait-host" class="hint hidden">等待房主開始…</p>
         <p class="hint">開另一個分頁或手機輸入代碼，就能一起玩（最多 4 人）。</p>
@@ -175,8 +176,10 @@
             <p class="label">排行榜</p>
             <ol id="leaderboard" class="board"></ol>
           </div>
+          <button id="btn-shop2" class="shop-btn">用防災基金蓋建設</button>
           <button id="btn-again" class="primary hidden">再救一次！</button>
           <p id="wait-again" class="hint hidden">等待房主開始下一局…</p>
+          <button id="btn-result-lobby" class="result-lobby-btn">回到大廳</button>
         </section>
       </div>
 
@@ -205,6 +208,19 @@
       </ol>
       <p class="sdg">對應聯合國永續發展目標 <b>SDG 13 氣候行動</b>：13.1 強化氣候災害的調適與應變能力；13.3 提升氣候變遷的教育與意識。</p>
       <button class="primary modal-close">知道了，開始救災！</button>
+    </div>
+  </div>
+
+  <!-- 局間防災建設 -->
+  <div id="shop" class="modal hidden">
+    <div class="modal-box">
+      <p class="news-tag">防災建設</p>
+      <h2>平時蓋好防災建設，災害來時就輕鬆</h2>
+      <p class="hint">每局賺到的金幣會存進你的防災基金。蓋好的建設會一直留著，每局開始前每人選一樣帶進場；大家帶不同的，效果會疊加。</p>
+      <p class="fund">我的防災基金 <img class="px" src="/static/assets/items/GoldCoin.png" alt=""><b id="shop-fund">0</b></p>
+      <ul id="shop-list" class="shop-list"></ul>
+      <p id="shop-msg" class="error"></p>
+      <button class="primary modal-close">完成</button>
     </div>
   </div>
 

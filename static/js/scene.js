@@ -598,8 +598,10 @@ class FloodScene extends Phaser.Scene {
     });
     // 工作台上的零件
     this.benchItems.removeAll(true);
-    s.bench.parts.forEach((part, k) =>
-      this.benchItems.add(this.add.image(this.benchX - 6 + k * 12, this.benchY - 6, "i_" + part).setScale(0.8)));
+    // 零件放上工作台就「收進去」不顯示；組裝好了才把成品擺出來
+    const product = KIT().bench && KIT().bench.product;
+    s.bench.parts.filter((part) => part === product).forEach(() =>
+      this.benchItems.add(this.add.image(this.benchX, this.benchY - 6, "i_" + product).setScale(0.8)));
     if (s.bench.progress > 0) {
       const by = this.benchY - 22;
       const g = this.add.graphics().fillStyle(0x3b2a1e).fillRect(this.benchX - 13, by - 1, 26, 6).fillStyle(0xfff8e7)

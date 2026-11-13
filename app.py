@@ -14,6 +14,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room  # noqa: E402
 
 import ai  # noqa: E402
 import db  # noqa: E402
+import disasters  # noqa: E402
 import llm  # noqa: E402
 from game import GAME_TIME, Room, new_code  # noqa: E402
 
@@ -301,6 +302,10 @@ def write_report(room, result):
         events = [dict(h) for h in room.history]
     record_id = db.save_record(room.code, result, events)
     db.update_players(result)
+    for p in result["players"]:                                  # 這局賺的金幣存進每個人的防災基金
+        db.add_fund(p["name"], p.get("account"), p.get("earned", 0))
+    for sid, p in list(room.players.items()):
+        socketio.emit("shop", shop_info(room, sid), to=sid)
     db.room_update(getattr(room, "db_id", None), status="finished", record_id=record_id)
     socketio.emit("record_saved", {"record_id": record_id}, to=room.code)
     rep = ai.make_report(result)
@@ -488,6 +493,55 @@ def on_ping(data):
 def on_leave():
     _leave(request.sid)
     emit("left")
+
+
+# ── 局間防災建設：買、選這局要帶哪一樣 ────────────────────────
+def shop_info(room, sid):
+    p = room.players.get(sid) if room else None
+    if not p:
+        return None
+    w = db.get_wallet(p["name"], p.get("account"))
+    return {"fund": w["fund"], "owned": w["owned"], "equipped": p.get("facility"),
+            "items": [{"id": k, **v} for k, v in disasters.FACILITIES.items()]}
+
+
+@socketio.on("shop")
+def on_shop():
+    room = current_room()
+    info = shop_info(room, request.sid)
+    if info:
+        emit("shop", info)
+
+
+@socketio.on("buy")
+def on_buy(data):
+    room = current_room()
+    p = room.players.get(request.sid) if room else None
+    item = str((data or {}).get("item", ""))
+    if not p or item not in disasters.FACILITIES:
+        return
+    if room.status in ("playing", "intro"):
+        return emit("shop_msg", {"message": "遊戲進行中不能買，等這局結束吧"})
+    ok, msg = db.buy_facility(p["name"], p.get("account"), item, disasters.FACILITIES[item]["price"])
+    if ok:
+        p["facility"] = item                                    # 買了就直接帶這一樣
+        socketio.emit("room_update", room.lobby_info(), to=room.code)
+    emit("shop_msg", {"message": f"蓋好了「{disasters.FACILITIES[item]['name']}」！" if ok else msg, "ok": ok})
+    emit("shop", shop_info(room, request.sid))
+
+
+@socketio.on("equip")
+def on_equip(data):
+    room = current_room()
+    p = room.players.get(request.sid) if room else None
+    item = (data or {}).get("item")
+    if not p or room.status in ("playing", "intro"):
+        return
+    if item and item not in db.get_wallet(p["name"], p.get("account"))["owned"]:
+        return emit("shop_msg", {"message": "還沒有蓋這個建設"})
+    p["facility"] = item or None
+    socketio.emit("room_update", room.lobby_info(), to=room.code)
+    emit("shop", shop_info(room, request.sid))
 
 
 @socketio.on("connect")

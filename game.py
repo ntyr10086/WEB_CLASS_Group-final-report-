@@ -157,7 +157,7 @@ class Room:
 
     def _reset_player(self, p, i):
         p.update({"x": 172 + 18 * i, "y": 186, "dir": 0, "moving": False, "hold": None,
-                  "work": None, "stun_until": 0, "stats": {"fixed": 0, "items": 0}})
+                  "work": None, "stun_until": 0, "stats": {"fixed": 0, "items": 0, "coins": 0}})
 
     def remove_player(self, sid):
         self.players.pop(sid, None)
@@ -169,7 +169,8 @@ class Room:
 
     def lobby_info(self):
         return {"code": self.code, "host": self.host, "status": self.status,
-                "players": [{"id": p["id"], "name": p["name"], "skin": p["skin"]} for p in self.players.values()]}
+                "players": [{"id": p["id"], "name": p["name"], "skin": p["skin"], "facility": p.get("facility")}
+                            for p in self.players.values()]}
 
     def map_info(self, disaster=None):
         d = disasters.get(disaster or self.disaster)
@@ -236,6 +237,8 @@ class Room:
         self.last_beat = -BEAT_GAP
         self.news_times = [GAME_TIME * k for k in (0.12, 0.45, 0.78)]
         self.chapter = None                  # 現在這一章的劇情任務
+        self.facilities = []                 # 這局大家帶的防災建設
+        self.facility_said = True
         self.chapters = []                   # 這局每一章的結果（結算時講故事用）
         self.mode = "normal"
         self.tut_step = -1
@@ -249,6 +252,12 @@ class Room:
         self.disaster = (scenario or {}).get("disaster", "typhoon") if mode == "normal" else "typhoon"
         for i, p in enumerate(self.players.values()):
             self._reset_player(p, i)
+        # 每人帶一樣防災建設（同一種不重複計算）；教學不使用
+        self.facilities = sorted({p.get("facility") for p in self.players.values()
+                                  if p.get("facility") in disasters.FACILITIES}) if mode == "normal" else []
+        if "aid" in self.facilities:
+            self.hearts += 1
+        self.facility_said = False
         self.status = "playing"
         if mode == "tutorial":
             self.tut_advance()
@@ -345,7 +354,8 @@ class Room:
     def rise_rate(self):
         base = {"小雨": 0.10, "颱風眼": 0.03, "暴雨": 0.20}[self.phase()]
         active = [i for i in self.incidents if i["state"] == "active"]
-        return base + 0.09 * sum(i["type"] == "breach" for i in active) + 0.05 * sum(i["type"] == "drain" for i in active)
+        rate = base + 0.09 * sum(i["type"] == "breach" for i in active) + 0.05 * sum(i["type"] == "drain" for i in active)
+        return rate * (0.85 if "pond" in getattr(self, "facilities", []) else 1)     # 滯洪蓄水池
 
     def max_incidents(self):
         return min(5, 2 + len(self.players))
@@ -381,9 +391,15 @@ class Room:
         """picked_by：這個災情是誰挑的（"ai" 災難導演／"rule" 規則版），會記進歷史紀錄"""
         info, r = INCIDENTS[kind], self.R(kind)
         t = r.get("time", info["time"])
+        fac = getattr(self, "facilities", [])
+        if "alarm" in fac:
+            t = round(t * 1.2)                                   # 預警廣播站
+        need_count = r.get("count", 1)
+        if kind == "breach" and "levee" in fac:
+            need_count = max(1, need_count - 1)                  # 強化防線
         inc = {"id": self._id("i"), "type": kind, "x": x, "y": y, "state": "active",
                "timer": t, "max_timer": t, "progress": 0.0, "count": 0, "given": [],
-               "need": r["need"], "need_count": r.get("count", 1),
+               "need": r["need"], "need_count": need_count,
                "line": line or random.choice(self.D["lines"][kind]),
                "house": self._house_at(x, y) if kind in ("house_flood", "trapped", "electric") else None}
         if kind == "tree":
@@ -465,7 +481,7 @@ class Room:
             if inc["state"] == "pumping":
                 inc["progress"] += dt / 6.0
                 if inc["progress"] >= 1:
-                    out += self.resolve(inc, None)
+                    out += self.resolve(inc, self.players.get(inc.get("by_sid")))
                 continue
             if not tutorial:
                 inc["timer"] -= dt          # 教學中不倒數
@@ -505,7 +521,8 @@ class Room:
                     inc["waiting_team"] = True
                     continue
                 inc["waiting_team"] = False
-                inc["progress"] += dt / r["work"]       # 多人一起按會更快
+                work = r["work"] / (1.5 if inc["type"] == "drain" and "green" in getattr(self, "facilities", []) else 1)
+                inc["progress"] += dt / work            # 多人一起按會更快（社區綠地讓清理更快）
                 if inc["progress"] >= 1:
                     out += self.resolve(inc, p)
                     for q in self.players.values():
@@ -557,6 +574,11 @@ class Room:
 
     def chapter_tick(self):
         out = []
+        if not self.facility_said and self.elapsed >= 1:
+            self.facility_said = True
+            if self.facilities:
+                names = "、".join(disasters.FACILITIES[f]["name"] for f in self.facilities)
+                out.append(("dialogue", {"speaker": "鎮長", "line": f"大家平時蓋的{names}派上用場了！這就是平時準備的力量。"}, None))
         if self.elapsed < 2.5:                                   # 開局先讓大家看清楚畫面
             return out
         phase = self.phase()
@@ -594,6 +616,8 @@ class Room:
         out = [("chapter", self.chapter_info(), None), ("dialogue", {"speaker": speaker, "line": line}, None)]
         if success:
             self.coins += ch["bonus"]
+            for q in self.players.values():                      # 劇情任務是大家一起完成的，每人都拿到
+                q["stats"]["coins"] += ch["bonus"]
             out.append(("fx", {"type": "coin", "x": W / 2, "y": 120, "coins": ch["bonus"], "text": "劇情任務完成"}, None))
         elif penalty:
             self.level = min(100.0, self.level + ch["penalty"])  # 沒準備好的後果：之後更危險
@@ -671,6 +695,7 @@ class Room:
                     q["hold"], q["work"] = None, None
         if p:
             p["stats"]["fixed"] += 1
+            p["stats"]["coins"] += gain
         tip = None
         if self.mode == "normal" and inc["type"] not in self.tips_shown:   # 每種災情第一次解除時附上一次知識（教學本身已經有講）
             self.tips_shown.add(inc["type"])
@@ -744,6 +769,7 @@ class Room:
                 return [("fx", {"type": "bag", "x": inc["x"], "y": inc["y"],
                                 "text": f"{inc['count']}/{inc['need_count']}"}, None)]
             if r["how"] == "pump":
+                inc["by_sid"] = sid
                 inc["state"] = "pumping"
                 inc["progress"] = 0.0
                 return [("fx", {"type": "pump", "x": inc["x"], "y": inc["y"], "text": "抽水中…"}, None)]
@@ -777,6 +803,7 @@ class Room:
             if st_near and st["kind"] == "truck" and truck and hold in truck["accepts"]:
                 p["hold"] = None
                 self.coins += 15
+                p["stats"]["coins"] += 15
                 self.tut_flags.add("trash")
                 return [("fx", {"type": "coin", "x": st["x"], "y": st["y"] - 10, "coins": 15, "text": "清運完成"}, None)]
             if st_near and st["kind"] == "crate" and self.crate_item(st) == hold:
@@ -850,7 +877,8 @@ class Room:
             "scenario_by": (self.scenario or {}).get("by", "rule"),
             "lessons": [{"name": self.inc_name(k), "text": self.D["knowledge"][k], "fixed": v["fixed"], "failed": v["failed"]}
                         for k, v in by_type.items()],
-            "players": [{"id": p["id"], "name": p["name"], "account": p.get("account"),
+            "facilities": [disasters.FACILITIES[f]["name"] for f in self.facilities],
+            "players": [{"id": p["id"], "name": p["name"], "account": p.get("account"), "earned": p["stats"]["coins"],
                          "skin": p["skin"], "fixed": p["stats"]["fixed"],
                          "items": p["stats"]["items"], "title": titles[p["id"]]} for p in players],
             "moments": self.moments(),
@@ -866,7 +894,7 @@ class Room:
         m = {
             "peak_level": round(getattr(self, "peak_level", self.level)),
             "peak_active": getattr(self, "peak_active", 0),
-            "hearts_lost": START_HEARTS - self.hearts,
+            "hearts_lost": max(0, START_HEARTS + (1 if "aid" in self.facilities else 0) - self.hearts),
             "players": len(self.players),
             "chapters_done": sum(c["status"] == "done" for c in self.chapters),
             "chapters_failed": [c["title"].split("　")[-1] for c in self.chapters if c["status"] == "failed"],
@@ -898,6 +926,8 @@ class Room:
             "water_y": round(self.water_y(), 1), "phase": self.phase(),
             "phase_label": self.phase_label(), "disaster": self.disaster, "chapter": self.chapter_info(),
             "hearts": self.hearts, "coins": self.coins, "mode": self.mode, "tutorial": self.tutorial_info(),
+            "max_hearts": START_HEARTS + (1 if "aid" in getattr(self, "facilities", []) else 0),
+            "facilities": list(getattr(self, "facilities", [])),
             "players": [{"id": p["id"], "name": p["name"], "skin": p["skin"], "x": round(p["x"], 1),
                          "y": round(p["y"], 1), "dir": p["dir"], "moving": p["moving"], "hold": p["hold"],
                          "stun": now < p["stun_until"],

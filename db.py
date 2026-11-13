@@ -461,3 +461,75 @@ def account_records(name, limit=10):
     rows = [r for r in _mem["game_records"].values() if any(p.get("account") == name for p in r["players"])]
     rows.sort(key=lambda r: r["played_at"], reverse=True)
     return [_clean({k: v for k, v in r.items() if k != "events"}) for r in rows[:limit]]
+
+
+# ── 防災基金與防災建設（局間用金幣買，開局每人帶一樣）────────────────
+# 登入的人存在 users（帳號），訪客存在 players（暱稱）；欄位：fund 防災基金、owned 已蓋好的建設
+def _wallet_target(name, account):
+    return ("users", account) if account else ("players", name)
+
+
+def _wallet_doc(coll, key):
+    """取得錢包；第一次用時給一筆起始基金"""
+    import disasters
+    if _db is not None:
+        try:
+            c = _db[coll]
+            c.update_one({"name": key, "fund": {"$exists": False}},
+                         {"$set": {"fund": disasters.START_FUND, "owned": []}}, upsert=(coll == "players"))
+            return c.find_one({"name": key}, {"fund": 1, "owned": 1}) or {}
+        except Exception as e:
+            print("[db] 防災基金讀取失敗：", e)
+    store = _mem[coll]
+    doc = store.get(key)
+    if doc is None:
+        if coll == "users":
+            return {}
+        doc = store[key] = {"name": key, "games": 0, "wins": 0, "fixed": 0, "items": 0,
+                            "best_score": 0, "best_stars": 0, "created_at": now()}
+    doc.setdefault("fund", disasters.START_FUND)
+    doc.setdefault("owned", [])
+    return doc
+
+
+def get_wallet(name, account=None):
+    coll, key = _wallet_target(name, account)
+    doc = _wallet_doc(coll, key)
+    return {"fund": int(doc.get("fund", 0)), "owned": list(doc.get("owned", []))}
+
+
+def add_fund(name, account, amount):
+    if amount <= 0:
+        return
+    coll, key = _wallet_target(name, account)
+    _wallet_doc(coll, key)
+    if _db is not None:
+        try:
+            _db[coll].update_one({"name": key}, {"$inc": {"fund": int(amount)}})
+            return
+        except Exception as e:
+            print("[db] 防災基金更新失敗：", e)
+    doc = _mem[coll].get(key)
+    if doc is not None:
+        doc["fund"] = doc.get("fund", 0) + int(amount)
+
+
+def buy_facility(name, account, item, price):
+    """買防災建設：錢夠、還沒買過才成功（資料庫用條件更新，按兩下也不會扣兩次錢）"""
+    coll, key = _wallet_target(name, account)
+    doc = _wallet_doc(coll, key)
+    if item in doc.get("owned", []):
+        return False, "已經蓋好了"
+    if doc.get("fund", 0) < price:
+        return False, "防災基金不夠"
+    if _db is not None:
+        try:
+            r = _db[coll].update_one({"name": key, "fund": {"$gte": price}, "owned": {"$ne": item}},
+                                     {"$inc": {"fund": -price}, "$addToSet": {"owned": item}})
+            return (True, "") if r.modified_count else (False, "防災基金不夠")
+        except Exception as e:
+            print("[db] 購買失敗：", e)
+            return False, "暫時無法購買，請再試一次"
+    doc["fund"] -= price
+    doc["owned"].append(item)
+    return True, ""

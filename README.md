@@ -1,6 +1,6 @@
 # 災變大作戰：災難救援隊
 
-SDG 13 氣候行動・2～4 人即時合作的 2D 像素救災遊戲（玩法參考《Overcooked》）。
+SDG 13 氣候行動・2～4 人即時合作的 2D 像素救災遊戲。
 Flask + Flask-SocketIO（WebSocket）+ MongoDB + LangChain/OpenAI + Phaser 3。
 
 ## 玩法

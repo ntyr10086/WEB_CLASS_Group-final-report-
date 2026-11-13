@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>災變大作戰：災難救援隊</title>
+  <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+  <main class="stage">
+    <!-- 大廳 -->
+    <section id="lobby" class="panel lobby">
+      <button id="btn-account" class="account-btn">登入／註冊</button>
+      <p class="eyebrow">氣候行動</p>
+      <h1>災變大作戰</h1>
+      <p class="subtitle">災難救援隊</p>
+      <div class="hero">
+        <img class="px" src="/static/assets/chars/NinjaBlue_face.png" alt="">
+        <img class="px" src="/static/assets/chars/NinjaRed_face.png" alt="">
+        <img class="px" src="/static/assets/chars/NinjaGreen_face.png" alt="">
+        <img class="px" src="/static/assets/chars/NinjaYellow_face.png" alt="">
+      </div>
+      <p class="sub">颱風、熱浪、土石流……每局隨機一種氣候災難！看災情單、準備工具、衝到現場治災，和朋友一起撐過三分鐘！</p>
+      <div class="lobby-links">
+        <button id="btn-about" class="link-btn">這個遊戲想傳達什麼？</button>
+        <button id="btn-settings-lobby" class="link-btn">聲音設定</button>
+      </div>
+      <div id="lobby-join">
+        <label>暱稱<input id="name" maxlength="10" placeholder="輸入暱稱（不登入就是訪客）"></label>
+        <!-- 兩個選項：新手教學／開始遊戲（還沒完成教學時，開始遊戲上鎖） -->
+        <div class="choices">
+          <button id="btn-first-tutorial" class="choice tutorial-choice">
+            <img class="px" src="/static/assets/items/Hoe.png" alt="">
+            <b>新手教學</b><small>一步一步學會救災（約 3 分鐘）</small>
+          </button>
+          <button id="btn-create" class="choice play-choice">
+            <img class="px" src="/static/assets/items/MoneyBag.png" alt="">
+            <b>開始遊戲</b><small id="play-sub">建立房間，邀朋友一起救災</small>
+          </button>
+        </div>
+        <p id="lock-note" class="notice hidden">第一次玩要先完成新手教學，「開始遊戲」和「加入房間」才會解鎖。換電腦也沒關係，輸入同一個暱稱就會記得你。</p>
+        <div class="or">或加入朋友的房間</div>
+        <div class="row">
+          <input id="code" maxlength="4" placeholder="房間代碼">
+          <button id="btn-join">加入</button>
+        </div>
+        <p id="lobby-error" class="error"></p>
+      </div>
+      <div id="lobby-room" class="hidden">
+        <p class="label">房間代碼</p>
+        <p id="room-code" class="room-code">----</p>
+        <ul id="player-list"></ul>
+        <button id="btn-tutorial" class="tutorial-btn hidden">新手教學（第一次玩推薦！）</button>
+        <button id="btn-start" class="primary hidden">出發救災！</button>
+        <p id="wait-host" class="hint hidden">等待房主開始…</p>
+        <p class="hint">開另一個分頁或手機輸入代碼，就能一起玩（最多 4 人）。</p>
+        <button id="btn-leave" class="link-btn">離開房間</button>
+      </div>
+    </section>
+
+    <!-- 遊戲 -->
+    <div id="game-wrap" class="hidden">
+      <div class="screen">
+        <div id="game"></div>
+        <div class="hud">
+          <div id="cards" class="cards"></div>
+          <div class="stats">
+            <div class="stat"><span id="hud-hearts" class="hearts"></span></div>
+            <div class="stat coins"><img class="px" src="/static/assets/items/GoldCoin.png" alt=""><span id="hud-coins">0</span></div>
+            <div class="stat"><span id="hud-time">3:00</span></div>
+            <button id="btn-manual" class="manual-btn" title="救災手冊（H）">?</button>
+            <div class="stat water">
+              <span id="hud-meter" class="mini">水位</span>
+              <div class="water-bar"><div id="hud-water-fill"></div></div>
+              <span id="hud-water" class="mini">0%</span>
+            </div>
+            <span id="hud-phase" class="chip">小雨</span>
+            <button id="btn-settings" class="manual-btn" title="聲音設定（M 靜音）">設定</button>
+            <!-- 這一章的劇情任務 -->
+            <div id="story-task" class="story-task hidden">
+              <img id="task-face" class="px" src="/static/assets/chars/OldMan_face.png" alt="">
+              <div class="task-body">
+                <p id="task-title" class="task-title">第一章</p>
+                <p class="task-goal"><span id="task-goal"></span><b id="task-count">0/2</b></p>
+              </div>
+            </div>
+            </div>
+        </div>
+
+        <div id="banner" class="banner hidden"></div>
+        <div class="keys">
+          <span><kbd>WASD</kbd>移動</span>
+          <span><kbd>空白</kbd>拿・放・交付</span>
+          <span><kbd>按住空白</kbd>處理災情</span>
+          <span><kbd>Q</kbd>求救標記</span>
+          <span><kbd>H</kbd>救災手冊</span>
+          <span><kbd>M</kbd>靜音</span>
+        </div>
+        <div id="dialog-toast" class="dialog-toast hidden">
+          <img id="toast-face" class="px" src="/static/assets/chars/OldMan_face.png" alt="">
+          <div><p id="toast-speaker" class="toast-speaker">鎮長</p><p id="toast-line"></p></div>
+        </div>
+        <div id="manual" class="manual hidden">
+          <div class="manual-box">
+            <p class="news-tag">救災手冊</p>
+            <div id="manual-list" class="manual-list"></div>
+            <p class="hint">手上一次只能拿一樣東西，可以丟在地上讓隊友接力。按 H 或點這裡關閉。</p>
+          </div>
+        </div>
+        <div id="tutorial" class="tutorial hidden">
+          <img id="tut-face" class="tut-face px" src="/static/assets/chars/OldMan_face.png" alt="">
+          <div class="tut-body">
+            <div class="tut-head"><b id="tut-speaker">鎮長</b><span id="tut-step" class="tut-step">1/32</span></div>
+            <span id="tut-text">用 WASD 移動</span>
+          </div>
+          <button id="tut-skip" class="tut-skip">跳過教學</button>
+        </div>
+
+        <!-- 開場劇情（AI 生成）：RPG 對話框 -->
+        <div id="intro" class="intro hidden">
+          <!-- 等劇情時的可愛轉場：救援隊扛著沙包跑過雨中 -->
+          <div id="intro-loading" class="intro-loading hidden">
+            <div class="cloud c1"></div><div class="cloud c2"></div>
+            <div class="parade">
+              <div class="walker" style="--skin:url('/static/assets/chars/NinjaBlue.png'); --d:0s"><img class="px bag" src="/static/assets/items/MoneyBag.png" alt=""></div>
+              <div class="walker" style="--skin:url('/static/assets/chars/NinjaRed.png'); --d:-.35s"><img class="px bag" src="/static/assets/items/Hoe.png" alt=""></div>
+              <div class="walker" style="--skin:url('/static/assets/chars/NinjaGreen.png'); --d:-.7s"><img class="px bag" src="/static/assets/items/Calamari.png" alt=""></div>
+              <div class="walker" style="--skin:url('/static/assets/chars/NinjaYellow.png'); --d:-1.05s"><img class="px bag" src="/static/assets/items/Axe.png" alt=""></div>
+            </div>
+            <p id="loading-line" class="loading-line">救援隊集合中</p>
+            <div class="loading-dots"><span></span><span></span><span></span></div>
+          </div>
+          <div class="story-head">
+            <p class="news-tag"><span id="intro-disaster" class="disaster-tag"></span><span id="intro-news">颱風新聞快報</span> <span id="intro-by" class="by"></span></p>
+            <h2 id="intro-name">颱風</h2>
+            <p id="intro-headline" class="headline"></p>
+          </div>
+          <div id="story-box" class="story-box">
+            <img id="story-face" class="px story-face" src="/static/assets/chars/OldMan_face.png" alt="">
+            <div class="story-body">
+              <p id="story-speaker" class="story-speaker">鎮長</p>
+              <p id="story-line" class="story-line">劇情生成中…</p>
+              <p id="story-next" class="story-next">點一下或按空白鍵繼續 ▼</p>
+              <div id="story-actions" class="story-actions hidden">
+                <button id="btn-ready" class="primary">出發救災！</button>
+                <span id="ready-status" class="hint"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 結算 -->
+        <section id="result" class="panel result hidden">
+          <p id="result-scenario" class="eyebrow"></p>
+          <h2 id="result-title">颱風過境</h2>
+          <p id="result-stars" class="stars"></p>
+          <div id="result-stats" class="result-stats"></div>
+          <ul id="result-players" class="result-players"></ul>
+          <div class="block">
+            <p class="label">這局的故事</p>
+            <ol id="result-story" class="story-list"></ol>
+          </div>
+          <div class="block mayor">
+            <img class="px" src="/static/assets/chars/OldMan_face.png" alt="">
+            <div><p class="label">鎮長的話</p><p id="result-report">鎮長正在想要說什麼…</p></div>
+          </div>
+          <div class="block">
+            <p class="label">這局遇到的災情 × 真實防災知識</p>
+            <ul id="result-lessons" class="lessons"></ul>
+            <p id="result-takeaway" class="takeaway">氣候變遷讓極端天氣越來越常見。平時準備防災物資、災時鄰里分工合作，就是我們能做的氣候調適（SDG 13）。</p>
+          </div>
+          <div class="block">
+            <p class="label">排行榜</p>
+            <ol id="leaderboard" class="board"></ol>
+          </div>
+          <button id="btn-again" class="primary hidden">再救一次！</button>
+          <p id="wait-again" class="hint hidden">等待房主開始下一局…</p>
+        </section>
+      </div>
+
+      <!-- 手機／平板觸控操作 -->
+      <div id="touch" class="touch">
+        <div id="joy" class="joy"><div id="knob" class="knob"></div></div>
+        <div class="touch-btns">
+          <button id="t-ping" class="t-btn small">標記</button>
+          <button id="t-act" class="t-btn big">拿・放<br><small>按住處理</small></button>
+        </div>
+      </div>
+      <p class="rotate-hint">手機橫放玩起來更順</p>
+    </div>
+  </main>
+
+  <!-- 這個遊戲想傳達什麼 -->
+  <div id="about" class="modal hidden">
+    <div class="modal-box">
+      <p class="news-tag">遊戲想傳達的事</p>
+      <h2>氣候變遷下，防災靠「平時準備」和「災時合作」</h2>
+      <ol class="about-list">
+        <li><b>極端天氣越來越常見</b>：氣候變遷讓颱風豪雨更強、熱浪更長、山區豪雨更容易引發土石流。遊戲每局隨機出現其中一種災難，越到後面越危險、災情越多，就是在模擬這件事。</li>
+        <li><b>平時準備，災時才來得及</b>：沙包、工具、抽水機零件都要事先放在倉庫裡。現實中也一樣，防災物資和避難計畫要在颱風來之前就準備好。</li>
+        <li><b>一個人救不了全鎮</b>：災情會同時發生，只有分工合作才撐得過去。這就是「韌性社區」：鄰里互相支援，比各自逃難更安全。</li>
+        <li><b>每個災情都是真實的知識</b>：斷電再抽水、受困待在高處、颱風前清水溝……每解除一種災情，畫面下方就會告訴你對應的防災知識。</li>
+      </ol>
+      <p class="sdg">對應聯合國永續發展目標 <b>SDG 13 氣候行動</b>：13.1 強化氣候災害的調適與應變能力；13.3 提升氣候變遷的教育與意識。</p>
+      <button class="primary modal-close">知道了，開始救災！</button>
+    </div>
+  </div>
+
+  <!-- 登入／註冊 -->
+  <div id="auth" class="modal hidden">
+    <div class="modal-box small">
+      <p class="news-tag">救援隊員登記</p>
+      <p class="hint">帳號就是你的遊戲暱稱。登入後會記下每一局的紀錄，也能加好友、看好友在哪個房間。不登入也可以用訪客身分玩。</p>
+      <label>帳號<input id="auth-name" maxlength="10" placeholder="2～10 個字" autocomplete="username"></label>
+      <label>密碼<input id="auth-pw" type="password" placeholder="至少 6 個字" autocomplete="current-password"></label>
+      <p id="auth-error" class="error"></p>
+      <div class="auth-btns">
+        <button id="btn-login" class="primary">登入</button>
+        <button id="btn-register">註冊新帳號</button>
+      </div>
+      <button class="link-btn modal-close">先不要，用訪客玩</button>
+    </div>
+  </div>
+
+  <!-- 我的帳號：紀錄＋好友 -->
+  <div id="account" class="modal hidden">
+    <div class="modal-box">
+      <div class="account-head">
+        <p class="news-tag">我的救援隊員證</p>
+        <h2 id="acc-name">隊員</h2>
+        <p class="friend-code">我的好友碼 <b id="acc-code">------</b> <button id="btn-copy-code" class="mini-btn">複製</button></p>
+      </div>
+      <div class="tabs">
+        <button class="tab on" data-tab="records">我的紀錄</button>
+        <button class="tab" data-tab="friends">好友</button>
+      </div>
+      <div id="tab-records" class="tab-body">
+        <div id="acc-stats" class="acc-stats"></div>
+        <ul id="acc-records" class="record-list"></ul>
+      </div>
+      <div id="tab-friends" class="tab-body hidden">
+        <div class="row">
+          <input id="friend-code" maxlength="6" placeholder="輸入朋友的好友碼">
+          <button id="btn-add-friend">加好友</button>
+        </div>
+        <p id="friend-msg" class="error"></p>
+        <ul id="friend-list" class="friend-list"></ul>
+      </div>
+      <div class="account-foot">
+        <button id="btn-logout" class="link-btn">登出</button>
+        <button class="primary modal-close">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 聲音設定 -->
+  <div id="settings" class="modal hidden">
+    <div class="modal-box small">
+      <p class="news-tag">設定</p>
+      <label class="slider">總音量<input id="vol-master" type="range" min="0" max="100"><span></span></label>
+      <label class="slider">背景音樂<input id="vol-music" type="range" min="0" max="100"><span></span></label>
+      <label class="slider">音效<input id="vol-sfx" type="range" min="0" max="100"><span></span></label>
+      <label class="slider">雨聲<input id="vol-ambient" type="range" min="0" max="100"><span></span></label>
+      <label class="check"><input id="vol-muted" type="checkbox">全部靜音（遊戲中按 M 也可以切換）</label>
+      <button class="primary modal-close">完成</button>
+      <button id="btn-quit" class="quit-btn hidden">退出遊戲，回到大廳</button>
+    </div>
+  </div>
+  <footer class="credits">美術與音效：Ninja Adventure Asset Pack（pixel-boy &amp; AAA，CC0）・字型：俐方體11號 Cubic 11（OFL）</footer>
+  <script src="{{ asset('js/scene.js') }}"></script>
+  <script src="{{ asset('js/main.js') }}"></script>
+</body>
+</html>

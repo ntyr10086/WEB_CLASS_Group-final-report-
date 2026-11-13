@@ -1,0 +1,340 @@
+@font-face {
+  font-family: "Cubic11";
+  src: url("/static/assets/font/Cubic_11.woff2") format("woff2");
+  font-display: swap;
+}
+
+:root {
+  --bg: #2b2140;
+  --paper: #fff8e7;
+  --ink: #3b2a1e;
+  --muted: #8a7462;
+  --edge: #3b2a1e;
+  --accent: #2a9d8f;
+  --warm: #f4a261;
+  --red: #e63946;
+  --gold: #ffd166;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Cubic11", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(122, 90, 200, .35), transparent 50%),
+    linear-gradient(#2b2140, #1c1630);
+}
+
+.px { image-rendering: pixelated; }
+.hidden { display: none !important; }
+
+.stage { max-width: 1240px; margin: 0 auto; padding: 18px 16px 10px; }
+
+/* 像素風框：雙層實心邊 */
+.panel, .card, .news, .banner, .recipe, .stat, .chip, button, input {
+  border: 3px solid var(--edge);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .35);
+}
+
+/* ── 大廳 ── */
+.panel { background: var(--paper); border-radius: 6px; padding: 26px 30px; }
+.lobby { max-width: 440px; margin: 40px auto; text-align: center; }
+.eyebrow { margin: 0; color: var(--accent); font-size: 13px; letter-spacing: 2px; }
+h1 { margin: 6px 0 0; font-size: 44px; font-weight: normal; letter-spacing: 4px; color: var(--ink); text-shadow: 3px 3px 0 var(--gold); }
+.subtitle { margin: 2px 0 14px; font-size: 18px; color: var(--muted); }
+.hero { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; }
+.hero img { width: 52px; height: 52px; border: 3px solid var(--edge); border-radius: 6px; background: #c7e9f1; animation: bob 1.2s infinite alternate; }
+.hero img:nth-child(2) { animation-delay: .3s; } .hero img:nth-child(3) { animation-delay: .6s; } .hero img:nth-child(4) { animation-delay: .9s; }
+@keyframes bob { to { transform: translateY(-5px); } }
+.sub { color: var(--muted); line-height: 1.7; margin: 0 0 20px; font-size: 14px; }
+label { display: block; text-align: left; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+input { display: block; width: 100%; margin-top: 6px; padding: 10px 12px; font: inherit; font-size: 16px; border-radius: 4px; background: #fff; box-shadow: none; }
+.row { display: flex; gap: 8px; }
+.row input { margin: 0; }
+button { padding: 10px 18px; font: inherit; font-size: 16px; border-radius: 4px; background: #fff; color: var(--ink); cursor: pointer; white-space: nowrap; }
+button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, .35); }
+button.primary { width: 100%; background: var(--warm); font-size: 18px; }
+button.primary:hover { background: #f7b77f; }
+.or { margin: 18px 0 10px; color: var(--muted); font-size: 13px; }
+.error { color: var(--red); min-height: 1em; font-size: 14px; }
+.label { margin: 0 0 4px; font-size: 12px; color: var(--muted); }
+.hint { font-size: 13px; color: var(--muted); }
+.room-code { font-size: 46px; letter-spacing: 10px; margin: 0 0 12px; }
+#player-list { list-style: none; padding: 0; margin: 0 0 16px; text-align: left; }
+#player-list li, .result-players li { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.face { width: 32px; height: 32px; border: 2px solid var(--edge); border-radius: 4px; background: #c7e9f1; }
+.tag { margin-left: auto; color: var(--accent); font-size: 13px; }
+
+/* ── HUD ── */
+/* HUD 疊在畫面上方的河面區域（參考 Overcooked：出餐單在左上、時間分數在右上）*/
+.hud {
+  position: absolute; top: 8px; left: 8px; right: 8px; z-index: 5;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; pointer-events: none;
+}
+.cards { flex: 1; min-width: 0; display: flex; gap: 6px; }
+.card { flex: 0 1 150px; min-width: 108px; overflow: hidden; background: var(--paper); border-radius: 5px; padding: 4px 7px 6px; }
+.card.new { animation: drop .35s ease-out; }
+@keyframes drop { from { transform: translateY(-30px); opacity: 0; } }
+.card-name { font-size: 13px; }
+.card-need { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+.card-need img { width: 32px; height: 32px; background: #f1e3c6; border-radius: 4px; padding: 4px; }
+.card-sub { font-size: 12px; color: var(--muted); }
+.card-bar { height: 7px; background: #e6d5b8; border: 2px solid var(--edge); border-radius: 2px; overflow: hidden; }
+.card-bar div { height: 100%; background: #80b918; transition: width .2s linear; }
+.card.urgent { background: #ffd6d6; border-color: var(--red); }
+.card.urgent .card-bar div { background: var(--red); }
+.card.ok .card-bar div { background: #48cae4; }
+@keyframes shake { 25% { transform: rotate(-2deg); } 75% { transform: rotate(2deg); } }
+
+.stats { flex: none; display: grid; grid-template-columns: repeat(4, auto); gap: 6px; justify-items: stretch; pointer-events: auto; }
+.stat { background: var(--paper); border-radius: 5px; padding: 3px 8px; display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 18px; }
+.stat.water { grid-column: span 2; }
+.hearts img { width: 18px; height: 18px; }
+.hearts img.lost { filter: grayscale(1) opacity(.35); }
+.coins img { width: 22px; height: 22px; }
+#hud-time.warn { color: var(--red); }
+@keyframes blink { to { opacity: .4; } }
+.water { gap: 6px; }
+.mini { font-size: 12px; color: var(--muted); }
+.water-bar { flex: 1; min-width: 70px; height: 12px; background: #e6d5b8; border: 2px solid var(--edge); }
+#hud-water-fill { height: 100%; width: 0; background: #48cae4; transition: width .3s; }
+.danger #hud-water-fill { background: var(--red); }
+.chip { background: #6c8ebf; color: #fff; padding: 3px 10px; border-radius: 5px; font-size: 15px; text-align: center; }
+.chip[data-phase="颱風眼"] { background: var(--accent); }
+.chip[data-phase="暴雨"] { background: var(--red); }
+
+/* ── 畫面 ── */
+.screen { position: relative; }
+#game { border: 4px solid var(--edge); border-radius: 6px; overflow: hidden; box-shadow: 0 6px 0 rgba(0, 0, 0, .4); line-height: 0; }
+#game canvas { width: 100% !important; height: auto !important; image-rendering: pixelated; }
+.danger #game { border-color: var(--red); }   /* 危險時只換邊框顏色，不閃爍 */
+@keyframes alarm { to { border-color: var(--red); box-shadow: 0 0 24px 4px rgba(230, 57, 70, .6); } }
+
+.banner {
+  position: absolute; top: 34%; left: 50%; transform: translateX(-50%);
+  background: var(--paper); padding: 10px 22px; font-size: 22px; border-radius: 5px;
+  pointer-events: none; white-space: nowrap; animation: pop .3s ease-out;
+}
+@keyframes pop { from { transform: translateX(-50%) scale(.6); opacity: 0; } }
+
+.intro { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(28, 22, 48, .55); }
+.news { width: min(460px, 86%); background: var(--paper); border-radius: 6px; padding: 18px 24px; text-align: center; animation: pop2 .4s ease-out; }
+@keyframes pop2 { from { transform: scale(.6); opacity: 0; } }
+.news-tag { margin: 0; display: inline-block; background: var(--red); color: #fff; padding: 2px 10px; font-size: 14px; }
+.news .by { color: #ffe8a3; font-size: 12px; margin-left: 6px; }
+.news h2 { margin: 10px 0 6px; font-size: 32px; font-weight: normal; }
+.news p { line-height: 1.7; }
+.count { font-size: 18px; color: var(--muted); }
+#intro-count { color: var(--red); font-size: 26px; }
+
+.result { position: absolute; top: 4%; left: 50%; transform: translateX(-50%); width: min(500px, 92%); max-height: 92%; overflow-y: auto; padding: 18px 24px; }
+.result h2 { margin: 4px 0; font-size: 26px; font-weight: normal; }
+.stars { margin: 0 0 8px; font-size: 34px; letter-spacing: 6px; color: #d8c9ad; }
+.stars .on { color: #f4a261; text-shadow: 2px 2px 0 var(--edge); }
+.result-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+.result-stats span { display: flex; align-items: center; gap: 4px; }
+.result-stats img { width: 20px; height: 20px; }
+.result-stats b { color: var(--ink); font-size: 18px; font-weight: normal; }
+.result-players { list-style: none; padding: 0; margin: 0 0 6px; font-size: 15px; }
+.result-players .title { margin-left: auto; color: #fff; background: var(--accent); padding: 2px 8px; border-radius: 3px; font-size: 13px; }
+.block { border-top: 2px dashed #d8c9ad; padding: 10px 0; }
+.block p { margin: 0; line-height: 1.7; font-size: 15px; }
+.tips { margin: 0; padding-left: 20px; line-height: 1.7; font-size: 14px; }
+.board { margin: 0; padding-left: 22px; font-size: 14px; line-height: 1.8; }
+.board li span:last-child { float: right; color: var(--muted); }
+
+.controls { color: #cbbfe0; font-size: 13px; text-align: center; margin: 12px 0 0; }
+.credits { color: #8a80a6; font-size: 11px; text-align: center; padding: 10px; }
+
+/* ── 新手教學 ── */
+.tutorial-btn { width: 100%; margin-bottom: 10px; background: #ffd166; font-size: 16px; }
+.tutorial {
+  position: absolute; left: 50%; top: 8px; transform: translateX(-50%); z-index: 6;
+  width: min(480px, 40%); display: flex; align-items: center; gap: 12px;
+  background: var(--paper); border: 3px solid var(--edge); border-radius: 6px;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .35); padding: 8px 12px; font-size: 17px;
+}
+.tutorial.pop { animation: pop .3s ease-out; }
+.tut-step { flex: none; background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 14px; }
+#tut-text { flex: 1; line-height: 1.4; }
+.tut-skip { flex: none; padding: 4px 10px; font-size: 13px; box-shadow: none; }
+
+/* ── 災情單上的食譜（參考 Overcooked 的出餐單）── */
+.card-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.card-badge { font-size: 12px; color: #fff; background: var(--ink); padding: 1px 6px; border-radius: 3px; }
+.recipe-line { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; margin: 5px 0 6px; font-size: 12px; color: var(--muted); }
+.recipe-line img { width: 20px; height: 20px; background: #f1e3c6; border: 2px solid var(--edge); border-radius: 3px; padding: 1px; }
+.recipe-line .place { background: #3b2a1e; color: #fff; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+.recipe-line .arr { color: var(--ink); }
+
+/* ── 鍵位提示：畫面左下角半透明 ── */
+.keys {
+  position: absolute; left: 10px; bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap;
+  font-size: 12px; color: #fff; background: rgba(28, 22, 48, .55); padding: 5px 9px; border-radius: 5px; pointer-events: none;
+}
+.keys span { display: flex; align-items: center; gap: 4px; }
+kbd {
+  font: inherit; font-size: 11px; color: var(--ink); background: var(--paper);
+  border: 2px solid var(--edge); border-bottom-width: 3px; border-radius: 3px; padding: 0 4px;
+}
+
+/* ── 救災手冊 ── */
+.manual-btn { padding: 0 10px; font-size: 16px; background: var(--gold); }
+.manual { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(28, 22, 48, .6); cursor: pointer; }
+.manual-box { width: min(640px, 92%); background: var(--paper); border: 3px solid var(--edge); border-radius: 6px; padding: 14px 20px; text-align: center; }
+.manual-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 8px; text-align: left; }
+.manual-item { background: #fff; border: 2px solid var(--edge); border-radius: 4px; padding: 6px 10px; }
+.manual-item b { font-weight: normal; color: var(--red); }
+.manual-item .recipe-line { margin: 4px 0 0; }
+.manual-list.compact { gap: 6px; margin: 10px 0 4px; }
+.manual-list.compact .manual-item { padding: 4px 8px; font-size: 13px; }
+.news { width: min(640px, 92%); }
+
+/* ════════ 響應式：遊戲畫面依視窗等比縮放（3:2），HUD 跟著畫面寬度縮放 ════════ */
+.stage { max-width: none; padding: 10px 12px 6px; }
+.screen {
+  width: min(100%, calc((100dvh - 30px) * 1.5));
+  margin: 0 auto;
+  container-type: inline-size;            /* 讓裡面的字可以用 cqw（畫面寬度的 1%）縮放 */
+}
+#game { aspect-ratio: 3 / 2; }
+#game canvas { width: 100% !important; height: 100% !important; touch-action: none; }
+
+.hud { top: .7cqw; left: .7cqw; right: .7cqw; gap: .8cqw; }
+.cards { gap: .5cqw; }
+.card { flex: 0 1 13cqw; min-width: 0; padding: .35cqw .6cqw .5cqw; border-width: 2px; }
+.card-name, .recipe-line { overflow: hidden; }
+.card-name { font-size: clamp(9px, 1.15cqw, 14px); white-space: nowrap; }
+.card-badge { font-size: clamp(8px, 1cqw, 12px); padding: 0 .4cqw; white-space: nowrap; flex: none; }
+.recipe-line { gap: .25cqw; margin: .4cqw 0 .5cqw; font-size: clamp(8px, 1cqw, 12px); }
+.recipe-line img { width: clamp(12px, 1.75cqw, 22px); height: clamp(12px, 1.75cqw, 22px); border-width: 1px; }
+.recipe-line .place { font-size: clamp(8px, .95cqw, 11px); }
+.card-bar { height: clamp(4px, .6cqw, 8px); }
+
+.stats { gap: .5cqw; }
+.stat { font-size: clamp(11px, 1.6cqw, 18px); padding: .25cqw .7cqw; border-width: 2px; }
+.hearts img, .coins img { width: clamp(10px, 1.6cqw, 18px); height: clamp(10px, 1.6cqw, 18px); }
+.water-bar { min-width: 6cqw; height: clamp(6px, 1cqw, 12px); }
+.mini { font-size: clamp(8px, 1cqw, 12px); }
+.chip { font-size: clamp(10px, 1.3cqw, 15px); padding: .25cqw .9cqw; border-width: 2px; }
+.manual-btn { font-size: clamp(11px, 1.4cqw, 16px); padding: 0 .9cqw; border-width: 2px; }
+
+.keys { left: .8cqw; bottom: .8cqw; gap: .8cqw; font-size: clamp(8px, 1cqw, 12px); padding: .4cqw .8cqw; }
+kbd { font-size: clamp(8px, .95cqw, 11px); }
+.tutorial { top: .7cqw; width: 40cqw; font-size: clamp(11px, 1.45cqw, 17px); padding: .6cqw 1cqw; gap: .9cqw; }
+.tut-step, .tut-skip { font-size: clamp(9px, 1.1cqw, 14px); }
+.banner { font-size: clamp(13px, 2cqw, 22px); padding: .8cqw 1.8cqw; }
+.news { padding: 1.4cqw 2cqw; }
+.news h2 { font-size: clamp(18px, 2.8cqw, 32px); margin: .8cqw 0 .4cqw; }
+.news p { font-size: clamp(11px, 1.3cqw, 16px); margin: .5cqw 0; }
+.manual-list.compact .manual-item { font-size: clamp(9px, 1.1cqw, 13px); padding: .3cqw .7cqw; }
+.manual-list.compact { margin: .8cqw 0 .3cqw; gap: .5cqw; }
+.result { max-height: 96%; padding: 1.4cqw 2cqw; }
+.result h2 { font-size: clamp(16px, 2.2cqw, 26px); }
+.stars { font-size: clamp(20px, 3cqw, 34px); }
+.block p, .tips, .board, .result-players { font-size: clamp(11px, 1.25cqw, 15px); }
+.manual-box { max-height: 94%; overflow-y: auto; }
+
+/* 小畫面（手機、平板直放、很小的視窗）：卡片只留名稱和倒數，鍵位提示收起來 */
+@container (max-width: 760px) {
+  .recipe-line { display: none; }
+  .card { flex-basis: 17cqw; }
+  .card-name { font-size: clamp(9px, 1.9cqw, 13px); }
+  .keys { display: none; }
+  .tutorial { top: auto; bottom: 1cqw; width: 80cqw; font-size: clamp(11px, 2.4cqw, 15px); }
+  .stat, .chip { font-size: clamp(9px, 2.2cqw, 14px); }
+  .hearts img, .coins img { width: clamp(9px, 2.2cqw, 14px); height: clamp(9px, 2.2cqw, 14px); }
+  .manual-list { grid-template-columns: 1fr; }
+  .news .manual-list.compact { display: none; }
+}
+
+/* ── 觸控操作：只在觸控裝置顯示 ── */
+.touch { display: none; }
+.rotate-hint { display: none; }
+@media (pointer: coarse) {
+  .touch { display: block; }
+  .joy {
+    position: fixed; left: max(14px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom));
+    width: 120px; height: 120px; border-radius: 50%; z-index: 20; touch-action: none;
+    background: rgba(255, 248, 231, .25); border: 3px solid rgba(59, 42, 30, .6);
+  }
+  .knob {
+    position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%;
+    background: rgba(255, 248, 231, .85); border: 3px solid var(--edge); pointer-events: none;
+  }
+  .touch-btns {
+    position: fixed; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom));
+    display: flex; align-items: flex-end; gap: 12px; z-index: 20;
+  }
+  .t-btn { touch-action: none; user-select: none; -webkit-user-select: none; border-radius: 50%; padding: 0; line-height: 1.2; }
+  .t-btn.big { width: 96px; height: 96px; background: rgba(244, 162, 97, .92); font-size: 17px; }
+  .t-btn.big small { font-size: 11px; }
+  .t-btn.small { width: 58px; height: 58px; background: rgba(255, 248, 231, .9); font-size: 13px; }
+  .t-btn.down { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, .35); filter: brightness(.9); }
+  #game-wrap { padding-bottom: 150px; }              /* 直放時把搖桿留在畫面下方，不擋遊戲 */
+  .credits { display: none; }
+}
+@media (pointer: coarse) and (orientation: portrait) { .rotate-hint { display: block; text-align: center; color: #cbbfe0; font-size: 13px; } }
+@media (pointer: coarse) and (orientation: landscape) {
+  #game-wrap { padding-bottom: 0; }
+  .screen { width: min(100%, calc((100dvh - 16px) * 1.5)); }
+  .joy { width: 100px; height: 100px; opacity: .8; }
+  .t-btn.big { width: 80px; height: 80px; font-size: 14px; }
+}
+@media (max-height: 520px) { .stage { padding-top: 6px; } .lobby { margin: 10px auto; padding: 16px 22px; } .hero { display: none; } }
+
+/* 居民求救台詞：掛在災情單下方的小對話框 */
+.card { position: relative; overflow: visible; }
+.card-say {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 2;   /* 寬度跟自己的災情單一樣，不會蓋到隔壁 */
+  background: #fff; border: 2px solid var(--edge); border-radius: 4px; padding: .3cqw .6cqw;
+  font-size: clamp(9px, 1.05cqw, 13px); line-height: 1.35; animation: pop2 .25s ease-out;
+}
+.card-say::before {
+  content: ""; position: absolute; left: 12px; top: -7px; border: 5px solid transparent; border-bottom-color: var(--edge); border-top: 0;
+}
+@container (max-width: 760px) { .card-say { display: none; } }
+
+/* 新手門檻 */
+.notice { background: #fff3c4; border: 2px dashed var(--warm); border-radius: 4px; padding: 8px 10px; font-size: 14px; line-height: 1.6; margin: 0 0 12px; }
+.link-btn { background: none; border: none; box-shadow: none; color: var(--muted); font-size: 13px; text-decoration: underline; margin-top: 12px; padding: 4px; }
+
+/* ── 遊戲想傳達的事、聲音設定（共用彈出視窗）── */
+.lobby-links { display: flex; justify-content: center; gap: 14px; margin: -8px 0 12px; }
+.lobby-links .link-btn { margin: 0; }
+.modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(28, 22, 48, .7); padding: 16px; }
+.modal-box { width: min(620px, 100%); max-height: 92vh; overflow-y: auto; background: var(--paper); border: 3px solid var(--edge); border-radius: 6px; box-shadow: 0 6px 0 rgba(0, 0, 0, .4); padding: 18px 24px; }
+.modal-box.small { width: min(420px, 100%); }
+.modal-box h2 { font-weight: normal; font-size: 22px; margin: 10px 0; line-height: 1.4; }
+.about-list { padding-left: 22px; line-height: 1.75; font-size: 15px; margin: 0 0 10px; }
+.about-list li { margin-bottom: 6px; }
+.about-list b, .sdg b { font-weight: normal; color: var(--red); }
+.sdg { font-size: 13px; color: var(--muted); line-height: 1.6; background: #f1e3c6; padding: 8px 10px; border-radius: 4px; }
+.slider { display: grid; grid-template-columns: 80px 1fr 40px; align-items: center; gap: 10px; margin: 12px 0; font-size: 15px; color: var(--ink); }
+.slider input { margin: 0; padding: 0; border: none; box-shadow: none; accent-color: var(--warm); background: none; }
+.slider span { text-align: right; color: var(--muted); font-size: 13px; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); margin: 12px 0 16px; }
+.check input { width: 18px; height: 18px; margin: 0; box-shadow: none; }
+
+/* 開場任務目標 */
+.goal { background: #fff3c4; border-radius: 4px; padding: .5cqw 1cqw; color: var(--ink); }
+
+/* 遊戲中的防災小知識字幕（第一次解除某類災情時出現，不出聲） */
+.tip-ticker {
+  position: absolute; left: 50%; bottom: 3.5cqw; transform: translateX(-50%); z-index: 6;
+  max-width: 62cqw; display: flex; align-items: center; gap: .8cqw;
+  background: var(--paper); border: 2px solid var(--edge); border-radius: 5px; box-shadow: 0 3px 0 rgba(0, 0, 0, .3);
+  padding: .5cqw 1cqw; font-size: clamp(10px, 1.3cqw, 15px); line-height: 1.4; animation: pop .3s ease-out;
+}
+.tip-tag { flex: none; background: var(--accent); color: #fff; padding: 1px 6px; border-radius: 3px; font-size: .85em; }
+@container (max-width: 760px) { .tip-ticker { max-width: 92cqw; bottom: 1cqw; } }
+
+/* 結算：這局學到的知識 */
+.lessons { list-style: none; padding: 0; margin: 4px 0 8px; display: grid; gap: 6px; }
+.lessons li { background: #fff; border: 2px solid #e6d5b8; border-radius: 4px; padding: 6px 8px; font-size: clamp(11px, 1.2cqw, 14px); line-height: 1.55; }
+.lessons .tag-ok { color: var(--accent); }
+.lessons .tag-bad { color: var(--red); }
+.takeaway { font-size: clamp(11px, 1.2cqw, 14px); color: var(--ink); background: #fff3c4; padding: 6px 8px; border-radius: 4px; margin: 0; }

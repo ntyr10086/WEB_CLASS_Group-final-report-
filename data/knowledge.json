@@ -1,0 +1,304 @@
+[
+ {
+  "topic": "颱風天遠離河堤",
+  "content": "颱風豪雨時河川水位會快速上升，不要到河堤、河邊觀浪或釣魚；堤防搶修交給專業人員。",
+  "tags": [
+   "breach",
+   "淹水",
+   "河川"
+  ],
+  "source": "經濟部水利署",
+  "url": "https://www.wra.gov.tw/"
+ },
+ {
+  "topic": "事先準備擋水設施",
+  "content": "住在低窪地區的家庭，颱風前可以先準備沙包或擋水閘門，放在門口等進水處。",
+  "tags": [
+   "breach",
+   "house_flood",
+   "淹水",
+   "準備"
+  ],
+  "source": "經濟部水利署",
+  "url": "https://www.wra.gov.tw/"
+ },
+ {
+  "topic": "颱風前清排水溝",
+  "content": "颱風來之前，先清理住家附近排水溝和水溝蓋上的落葉與垃圾，雨水才排得掉，可以減少積水。",
+  "tags": [
+   "drain",
+   "積水",
+   "準備"
+  ],
+  "source": "經濟部水利署",
+  "url": "https://www.wra.gov.tw/"
+ },
+ {
+  "topic": "不要亂丟垃圾到水溝",
+  "content": "平常不把垃圾、落葉掃進水溝，豪雨時排水系統才不會堵住。",
+  "tags": [
+   "drain",
+   "積水",
+   "平時減災"
+  ],
+  "source": "經濟部水利署",
+  "url": "https://www.wra.gov.tw/"
+ },
+ {
+  "topic": "淹水前先關總電源",
+  "content": "水快淹進屋內前，先關閉總電源與瓦斯；不要觸碰泡水的插座、電器和電箱。",
+  "tags": [
+   "electric",
+   "house_flood",
+   "用電"
+  ],
+  "source": "台灣電力公司",
+  "url": "https://www.taipower.com.tw/"
+ },
+ {
+  "topic": "看到電線掉落要遠離",
+  "content": "看到斷落的電線或冒火花的電箱，保持距離並通報台電處理，不要自己靠近或拉扯。",
+  "tags": [
+   "electric",
+   "tree",
+   "用電"
+  ],
+  "source": "台灣電力公司",
+  "url": "https://www.taipower.com.tw/"
+ },
+ {
+  "topic": "泡過水的電器先檢查",
+  "content": "泡過水的電器要等專業人員檢查、完全乾燥後才能再通電使用。",
+  "tags": [
+   "electric",
+   "house_flood",
+   "用電",
+   "災後"
+  ],
+  "source": "台灣電力公司",
+  "url": "https://www.taipower.com.tw/"
+ },
+ {
+  "topic": "住家淹水往高處移動",
+  "content": "家裡開始淹水時先往高處或樓上移動，帶上手機、手電筒和重要證件，不要留在地下室。",
+  "tags": [
+   "house_flood",
+   "trapped",
+   "淹水",
+   "避難"
+  ],
+  "source": "內政部消防署",
+  "url": "https://www.nfa.gov.tw/"
+ },
+ {
+  "topic": "不要涉水或開車過積水路段",
+  "content": "看不清楚水深的積水路段不要步行或開車通過，水流可能把人和車沖走。",
+  "tags": [
+   "house_flood",
+   "trapped",
+   "淹水"
+  ],
+  "source": "內政部消防署",
+  "url": "https://www.nfa.gov.tw/"
+ },
+ {
+  "topic": "受困時待在高處求救",
+  "content": "受困時待在高處、保持手機電量，撥打 119 說明位置，不要自行涉水離開。",
+  "tags": [
+   "trapped",
+   "避難",
+   "求救"
+  ],
+  "source": "內政部消防署",
+  "url": "https://www.nfa.gov.tw/"
+ },
+ {
+  "topic": "事先知道避難處所",
+  "content": "颱風季前先查好住家附近的避難收容處所與路線，接到撤離通知時聽從指示撤離。",
+  "tags": [
+   "trapped",
+   "避難",
+   "準備"
+  ],
+  "source": "國家災害防救科技中心",
+  "url": "https://www.ncdr.nat.gov.tw/"
+ },
+ {
+  "topic": "準備緊急避難包",
+  "content": "避難包可以放飲水、乾糧、手電筒、行動電源、常備藥品和重要證件影本，放在容易拿的地方。",
+  "tags": [
+   "trapped",
+   "house_flood",
+   "準備"
+  ],
+  "source": "內政部消防署",
+  "url": "https://www.nfa.gov.tw/"
+ },
+ {
+  "topic": "颱風天避開路樹與招牌",
+  "content": "強風時避免在行道樹、招牌和鷹架下走動或停車，以免被倒下或掉落的東西砸到。",
+  "tags": [
+   "tree",
+   "強風"
+  ],
+  "source": "內政部消防署",
+  "url": "https://www.nfa.gov.tw/"
+ },
+ {
+  "topic": "路樹倒塌要通報",
+  "content": "看到路樹倒塌擋路，不要自己搬動，打 1999 市民專線或通報地方政府處理。",
+  "tags": [
+   "tree",
+   "強風",
+   "通報"
+  ],
+  "source": "地方政府 1999 市民專線",
+  "url": ""
+ },
+ {
+  "topic": "颱風前固定門窗與陽台物品",
+  "content": "颱風前把陽台盆栽、曬衣架等容易被吹落的東西收進屋內，門窗確實關緊。",
+  "tags": [
+   "tree",
+   "強風",
+   "準備"
+  ],
+  "source": "中央氣象署",
+  "url": "https://www.cwa.gov.tw/"
+ },
+ {
+  "topic": "隨時注意颱風警報",
+  "content": "颱風期間注意中央氣象署的颱風警報與豪雨特報，依照政府的停班停課與撤離資訊行動。",
+  "tags": [
+   "breach",
+   "drain",
+   "electric",
+   "house_flood",
+   "trapped",
+   "tree",
+   "準備"
+  ],
+  "source": "中央氣象署",
+  "url": "https://www.cwa.gov.tw/"
+ },
+ {
+  "topic": "高溫用電要注意",
+  "content": "天氣熱時冷氣和電扇一起開，不要全部插在同一條延長線；插頭或電線發燙、有焦味要立刻拔掉並請人檢查。",
+  "tags": [
+   "heatwave",
+   "heatwave:electric"
+  ],
+  "source": "台灣電力公司",
+  "url": "https://www.taipower.com.tw/"
+ },
+ {
+  "topic": "做好排水與水土保持",
+  "content": "山坡地要保持排水溝和截水溝通暢，不要任意開挖或砍伐山坡上的樹，讓雨水有路可以走。",
+  "tags": [
+   "landslide",
+   "landslide:drain"
+  ],
+  "source": "農業部農村發展及水土保持署",
+  "url": "https://www.ardswc.gov.tw/"
+ },
+ {
+  "topic": "遇到落石怎麼辦",
+  "content": "山區道路看到落石不要停車觀看，盡快通過或繞道，並通報公路單位；落石區之後還可能再崩落。",
+  "tags": [
+   "landslide",
+   "landslide:tree"
+  ],
+  "source": "交通部中央氣象署",
+  "url": "https://www.cwa.gov.tw/"
+ },
+ {
+  "topic": "野火靠近時準備水源、聽從撤離",
+  "content": "野火靠近住家時，事先準備好水源與水桶；接到撤離通知就要馬上離開，滅火交給消防員。",
+  "tags": [
+   "heatwave",
+   "heatwave:breach"
+  ],
+  "source": "內政部消防署",
+  "url": "https://www.nfa.gov.tw/"
+ },
+ {
+  "topic": "清出防火帶",
+  "content": "割除住家周圍的乾草、雜草，清出一圈沒有可燃物的防火帶，火就不容易延燒到房子。",
+  "tags": [
+   "heatwave",
+   "heatwave:drain"
+  ],
+  "source": "內政部消防署",
+  "url": "https://www.nfa.gov.tw/"
+ },
+ {
+  "topic": "滅火器口訣：拉、瞄、壓、掃",
+  "content": "使用滅火器：拉開插銷、瞄準火源底部、壓下握把、左右掃射；火勢太大就立刻逃生並打 119。",
+  "tags": [
+   "heatwave",
+   "heatwave:house_flood"
+  ],
+  "source": "內政部消防署",
+  "url": "https://www.nfa.gov.tw/"
+ },
+ {
+  "topic": "中暑急救",
+  "content": "有人中暑時：移到陰涼處、鬆開衣物，用冰毛巾或冷水降溫，意識清楚才慢慢給水，並撥打 119。",
+  "tags": [
+   "heatwave",
+   "heatwave:trapped"
+  ],
+  "source": "衛生福利部國民健康署",
+  "url": "https://www.hpa.gov.tw/"
+ },
+ {
+  "topic": "清走枯木枯枝",
+  "content": "倒下的枯木和枯枝要清走，堆在路邊遇到高溫和火星很容易起火。",
+  "tags": [
+   "heatwave",
+   "heatwave:tree"
+  ],
+  "source": "內政部消防署",
+  "url": "https://www.nfa.gov.tw/"
+ },
+ {
+  "topic": "擋土設施與撤離",
+  "content": "山坡邊可以用擋土設施減緩土石滑落；但看到山坡裂縫、滲水或落石，最重要的是立刻撤離。",
+  "tags": [
+   "landslide",
+   "landslide:breach"
+  ],
+  "source": "農業部農村發展及水土保持署",
+  "url": "https://www.ardswc.gov.tw/"
+ },
+ {
+  "topic": "拉起警示範圍",
+  "content": "看到被泥水泡到的電箱或掉落的電線不要靠近，拉起警示範圍提醒路人，並通報台電 1911。",
+  "tags": [
+   "landslide",
+   "landslide:electric"
+  ],
+  "source": "台灣電力公司",
+  "url": "https://www.taipower.com.tw/"
+ },
+ {
+  "topic": "提早撤離",
+  "content": "豪雨特報發布時，土石流潛勢區的住戶要提早撤離到避難處所，不要等土石下來才跑；行動不便的鄰居要有人幫忙。",
+  "tags": [
+   "landslide",
+   "landslide:house_flood"
+  ],
+  "source": "農業部農村發展及水土保持署",
+  "url": "https://www.ardswc.gov.tw/"
+ },
+ {
+  "topic": "受困時讓救援找到你",
+  "content": "受困時保持冷靜，敲打物品或用手電筒讓救援人員找到你；救援要多人合作，不要單獨冒險。",
+  "tags": [
+   "landslide",
+   "landslide:trapped"
+  ],
+  "source": "農業部農村發展及水土保持署",
+  "url": "https://www.ardswc.gov.tw/"
+ }
+]

@@ -681,3 +681,6 @@ body:has(#tutorial:not(.hidden)) .keys, body:has(#dialog-toast:not(.hidden)) .ke
 
 /* 結算畫面的「回到大廳」 */
 .result-lobby-btn { display: block; width: 100%; margin-top: 10px; background: #fff; font-size: 16px; }
+
+/* 新手教學框不顯示步驟編號（例如 17/32） */
+#tut-step { display: none !important; }

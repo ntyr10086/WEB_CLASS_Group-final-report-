@@ -455,7 +455,7 @@ function updateTutorial(tu) {
   if (!tu) { lastTutStep = 0; return; }
   if (tu.step !== lastTutStep) {
     lastTutStep = tu.step;
-    $("tut-step").textContent = `${tu.step}/${tu.total}`;
+    if ($("tut-step")) $("tut-step").textContent = `${tu.step}/${tu.total}`;   // 步驟編號已從畫面拿掉
     $("tut-text").textContent = tu.text;
     $("tut-speaker").textContent = tu.speaker || "鎮長";
     $("tut-face").src = faceSrc(tu.speaker || "鎮長");

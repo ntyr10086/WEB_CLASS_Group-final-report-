@@ -150,32 +150,14 @@ Flask + Flask-SocketIO（WebSocket）+ MongoDB + LangChain/OpenAI + Phaser 3。
 | DELETE | /api/friends/{名字} | 刪除好友 |
 | GET | /api/friends/{名字}/records | 好友的戰績與最近 10 局 |
 
-## 本機執行
 
-```bash
-python -m venv .venv
-source .venv/bin/activate          # Windows：.venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env               # Windows：copy .env.example .env
-python app.py
-```
-
-### 用本機 Ollama（不用 OpenAI Key）
+### 用本機 Ollama
 
 1. 安裝 Ollama（https://ollama.com），下載模型：`ollama pull llama3.2:3b`
-2. `.env` 設 `AI_PROVIDER=ollama`（或保持 auto、不填 OPENAI_API_KEY）
-3. `python app.py`，終端機出現「使用順序：ollama → 規則版」「Ollama 預熱完成」就成功了
-
-小模型中文偶爾會怪，可以改試 `qwen2.5:3b`（`ollama pull qwen2.5:3b`，再把 `OLLAMA_MODEL` 換掉）。
+2. `.env` 設 `AI_PROVIDER=ollama`
 
 ### 用 MongoDB
 
-- 本機：安裝 MongoDB Community，`.env` 設 `MONGO_URI=mongodb://localhost:27017`
-- 雲端：MongoDB Atlas 連線字串填進 `MONGO_URI`
-- 啟動時出現「已連線 MongoDB」「已匯入 16 筆防災知識」，用 Compass 打開 `flood_rush` 資料庫就看得到四個 collection
-
-打開 http://localhost:5000 → 建立房間 → 另一個分頁或手機輸入代碼加入 → 房主按「出發救災！」。
-測試時想快一點：`GAME_TIME=60 python app.py`
 
 ## 操作
 

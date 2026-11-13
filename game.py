@@ -700,7 +700,10 @@ class Room:
         if self.mode == "normal" and inc["type"] not in self.tips_shown:   # 每種災情第一次解除時附上一次知識（教學本身已經有講）
             self.tips_shown.add(inc["type"])
             tip = {"name": self.inc_name(inc["type"]), "text": self.D["knowledge"][inc["type"]]}
-        out = [("fx", {"type": "fixed", "x": inc["x"], "y": inc["y"], "coins": gain, "tip": tip,
+        # 帶居民到避難所才解除的：獎勵跳在居民抵達的地方（避難所），不是原本的房子
+        res = next((x for x in self.residents if x["id"] == inc.get("resident")), None) if inc.get("state") == "escort" else None
+        fx_x, fx_y = (round(res["x"]), round(res["y"])) if res else (inc["x"], inc["y"])
+        out = [("fx", {"type": "fixed", "x": fx_x, "y": fx_y, "coins": gain, "tip": tip,
                        "text": f"{self.inc_name(inc['type'])} 解除！", "returned": r["need"] if r["how"] == "hold" else None}, None)]
         if r.get("yield"):                         # 清出來的東西（淤泥、枯枝、碎石）要送去清運
             gx, gy = inc["x"] + 10, inc["y"] + 8

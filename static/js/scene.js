@@ -526,7 +526,7 @@ class FloodScene extends Phaser.Scene {
     const bar = this.add.graphics();
     c.add([bubble, bar]);
     if (inc.type !== "breach") this.tweens.add({ targets: bubble, y: bubble.y - 2, duration: 500, yoyo: true, repeat: -1 });
-    Object.assign(c, { bubble, bubbleBg: bg, bar, inc, needImg: need, needKey: needIcon(inc) });
+    Object.assign(c, { bubble, bubbleBg: bg, bar, inc, needImg: need, needKey: needIcon(inc), fxBox: fx });
     this.drawBubble(c, false);
     return c;
   }
@@ -576,6 +576,7 @@ class FloodScene extends Phaser.Scene {
       }
       if (o.pump) o.pump.setVisible(i.state === "pumping");
       o.bubble.setVisible(!working && i.state === "active");     // 護送中、抽水中都不再顯示需求
+      o.fxBox.setVisible(i.state !== "escort");                  // 人已經帶走了：房子上的警示三角形等標示收起來
       if (o.bags && o.shownCount !== i.count) {
         o.shownCount = i.count;
         o.bags.removeAll(true);

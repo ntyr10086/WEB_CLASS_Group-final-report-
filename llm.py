@@ -28,7 +28,8 @@ OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "20"))   # 本機模型第一
 _chain = None            # [(名稱, LangChain 模型)]，依序嘗試
 _lock = threading.Lock()
 status = {"provider": PROVIDER, "chain": [], "calls": 0, "fails": 0,
-          "last": None, "last_ms": None, "last_error": None, "ollama": None}
+          "last": None, "last_ms": None, "last_error": None, "ollama": None,
+          "init_error": None}
 
 
 # ── 建立模型 ───────────────────────────────────────────────
@@ -85,6 +86,7 @@ def get_chain():
                  "off": []}.get(PROVIDER, ["openai", "groq", "ollama"])
         makers = {"openai": _make_openai, "groq": _make_groq, "ollama": _make_ollama}
         _chain = []
+        status["init_error"] = None
         for name in order:
             try:
                 m = makers[name]()
@@ -92,6 +94,7 @@ def get_chain():
                     _chain.append((name, m))
             except Exception as e:
                 print(f"[ai] {name} 無法使用：", e)
+                status["init_error"] = f"{name}: {type(e).__name__}: {str(e)[:200]}"
         status["chain"] = [n for n, _ in _chain]
         print("[ai] 使用順序：", " → ".join(status["chain"] + ["規則版"]))
         return _chain
@@ -147,4 +150,9 @@ def warm_up():
 def info():
     return {**status, "openai_model": OPENAI_MODEL if "openai" in status["chain"] else None,
             "groq_model": GROQ_MODEL if "groq" in status["chain"] else None,
-            "ollama_model": OLLAMA_MODEL, "ollama_host": OLLAMA_HOST}
+            "ollama_model": OLLAMA_MODEL, "ollama_host": OLLAMA_HOST,
+            # 診斷用：只顯示有沒有讀到、key 的長度和開頭，不會顯示完整 key
+            "groq_key_set": bool(os.getenv("GROQ_API_KEY")),
+            "groq_key_len": len(os.getenv("GROQ_API_KEY") or ""),
+            "groq_key_head": (os.getenv("GROQ_API_KEY") or "")[:4],
+            "env_groq_names": [repr(k) for k in os.environ if "GROQ" in k.upper()]}

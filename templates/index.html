@@ -56,7 +56,7 @@
         <button id="btn-shop" class="shop-btn">防災建設（每人帶一樣進場）</button>
         <button id="btn-start" class="primary hidden">出發救災！</button>
         <p id="wait-host" class="hint hidden">等待房主開始…</p>
-        <p class="hint">開另一個分頁或手機輸入代碼，就能一起玩（最多 4 人）。</p>
+        <p class="hint">在好友列表點擊加入或輸入代碼，就能一起玩（最多 4 人）。</p>
         <button id="btn-leave" class="link-btn">離開房間</button>
       </div>
     </section>
@@ -96,6 +96,7 @@
           <span><kbd>空白</kbd>拿・放・交付</span>
           <span><kbd>按住空白</kbd>處理災情</span>
           <span><kbd>Q</kbd>求救標記</span>
+          <span><kbd>E</kbd>推隊友</span>
           <span><kbd>H</kbd>救災手冊</span>
           <span><kbd>M</kbd>靜音</span>
         </div>
@@ -170,7 +171,7 @@
           <div class="block">
             <p class="label">這局遇到的災情 × 真實防災知識</p>
             <ul id="result-lessons" class="lessons"></ul>
-            <p id="result-takeaway" class="takeaway">氣候變遷讓極端天氣越來越常見。平時準備防災物資、災時鄰里分工合作，就是我們能做的氣候調適（SDG 13）。</p>
+            <p id="result-takeaway" class="takeaway">氣候變遷讓極端天氣越來越常見。平時準備防災物資、災時鄰里分工合作，就是我們能做的氣候調適。</p>
           </div>
           <div class="block">
             <p class="label">排行榜</p>
@@ -187,7 +188,8 @@
       <div id="touch" class="touch">
         <div id="joy" class="joy"><div id="knob" class="knob"></div></div>
         <div class="touch-btns">
-          <button id="t-ping" class="t-btn small">標記</button>
+          <button id="t-ping" class="t-btn small">求救</button>
+          <button id="t-push" class="t-btn small">推</button>
           <button id="t-act" class="t-btn big">拿・放<br><small>按住處理</small></button>
         </div>
       </div>
@@ -231,6 +233,8 @@
       <p class="hint">帳號就是你的遊戲暱稱。登入後會記下每一局的紀錄，也能加好友、看好友在哪個房間。不登入也可以用訪客身分玩。</p>
       <label>帳號<input id="auth-name" maxlength="10" placeholder="2～10 個字" autocomplete="username"></label>
       <label>密碼<input id="auth-pw" type="password" placeholder="至少 6 個字" autocomplete="current-password"></label>
+      <label id="auth-pw2-row" class="hidden">確認密碼<input id="auth-pw2" type="password" placeholder="再輸入一次密碼" autocomplete="new-password"></label>
+      <label id="auth-show-row" class="check hidden"><input id="auth-show" type="checkbox">顯示密碼</label>
       <p id="auth-error" class="error"></p>
       <div class="auth-btns">
         <button id="btn-login" class="primary">登入</button>
@@ -251,6 +255,7 @@
       <div class="tabs">
         <button class="tab on" data-tab="records">我的紀錄</button>
         <button class="tab" data-tab="friends">好友</button>
+        <button class="tab" data-tab="password">帳號設定</button>
       </div>
       <div id="tab-records" class="tab-body">
         <div id="acc-stats" class="acc-stats"></div>
@@ -263,6 +268,23 @@
         </div>
         <p id="friend-msg" class="error"></p>
         <ul id="friend-list" class="friend-list"></ul>
+      </div>
+      <div id="tab-password" class="tab-body hidden">
+        <div class="set-sec">
+          <p class="set-title">修改帳號名稱</p>
+          <label>新的帳號名稱<input id="rn-name" maxlength="10" placeholder="2～10 個字" autocomplete="off"></label>
+          <label>目前的密碼<input id="rn-pw" type="password" autocomplete="current-password"></label>
+          <p id="rn-msg" class="error"></p>
+          <button id="btn-rename">確認改名</button>
+        </div>
+        <div class="set-sec">
+          <p class="set-title">修改密碼</p>
+          <label>目前的密碼<input id="pw-old" type="password" autocomplete="current-password"></label>
+          <label>新密碼<input id="pw-new" type="password" placeholder="至少 6 個字" autocomplete="new-password"></label>
+          <label>確認新密碼<input id="pw-new2" type="password" placeholder="再輸入一次新密碼" autocomplete="new-password"></label>
+          <p id="pw-msg" class="error"></p>
+          <button id="btn-change-pw" class="primary">確認修改</button>
+        </div>
       </div>
       <div class="account-foot">
         <button id="btn-logout" class="link-btn">登出</button>

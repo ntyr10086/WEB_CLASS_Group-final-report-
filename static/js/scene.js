@@ -142,10 +142,11 @@ class FloodScene extends Phaser.Scene {
       .setOrigin(0.5, 1).setDepth(430).setResolution(2).setVisible(false);
     this.lastHint = 0;
 
-    this.keys = this.input.keyboard.addKeys("W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,Q");
+    this.keys = this.input.keyboard.addKeys("W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,Q,E");
     this.keys.SPACE.on("down", () => { if (playing) socket.emit("act"); });
     this.keys.SPACE.on("up", () => { if (playing) socket.emit("act_end"); });
     this.keys.Q.on("down", () => { if (playing) socket.emit("ping_marker", { x: this.me.x, y: this.me.y }); });
+    this.keys.E.on("down", () => { if (playing) socket.emit("push"); });      // 推隊友
 
     // ── 音樂與雨聲 ──
     this.tracks = {
@@ -175,7 +176,7 @@ class FloodScene extends Phaser.Scene {
     const add = (tex, name, x, y, w, h) => this.textures.get(tex).add(name, 0, x, y, w, h);
     for (let i = 0; i < 4; i++) add("tHouse", "house" + i, i * 64, 0, 64, 48);
     add("tHouse", "shelter", 26 * 16, 0, 48, 48);
-    add("tNature", "tree", 0, 0, 16, 32);
+    add("tNature", "tree", 0, 0, 32, 32);                 // 整棵樹 32×32（原本只切到左半邊）
     add("tNature", "log", 12 * 16, 14 * 16, 16, 32);
     add("tElement", "cart", 0, 3 * 16, 32, 32);
   }
@@ -699,7 +700,14 @@ class FloodScene extends Phaser.Scene {
       let vy = (k.S.isDown || k.DOWN.isDown) - (k.W.isDown || k.UP.isDown);
       const t = window.touchDir || { x: 0, y: 0 };            // 手機搖桿
       if (!vx && !vy && (t.x || t.y)) { vx = t.x; vy = t.y; }
-      if (stunned) vx = vy = 0;
+      if (stunned || this.knock) vx = vy = 0;
+      if (this.knock) {                                          // 被隊友推：照伺服器算好的終點滑過去
+        const kn = this.knock;
+        kn.t = Math.min(1, kn.t + dt / kn.dur);
+        const e = 1 - (1 - kn.t) * (1 - kn.t);
+        this.me.x = kn.x0 + (kn.x1 - kn.x0) * e; this.me.y = kn.y0 + (kn.y1 - kn.y0) * e;
+        if (kn.t >= 1) this.knock = null;
+      }
       const moving = !!(vx || vy);
       if (moving) {
         const mag = Math.hypot(vx, vy), len = mag / Math.min(1, mag);   // 鍵盤：固定速度；搖桿：推越遠走越快
@@ -726,6 +734,7 @@ class FloodScene extends Phaser.Scene {
       o.setDepth(100 + o.y);
       this.setWalk(o, o.target.dir, o.target.moving);
     });
+    this.followCallMarks();
     Object.values(this.objs.residents).forEach((o) => {
       const dx = o.target.x - o.x, dy = o.target.y - o.y, moving = Math.abs(dx) + Math.abs(dy) > 0.4;
       o.x += dx * lerp; o.y += dy * lerp;
@@ -806,8 +815,54 @@ class FloodScene extends Phaser.Scene {
     }
   }
 
+  // 被推：0.22 秒滑到終點
+  knockTo(x, y) {
+    this.knock = { x0: this.me.x, y0: this.me.y, x1: x, y1: y, t: 0, dur: 0.22 };
+  }
+
+  // 推人的那一下：被推的人腳邊揚起一點灰塵
+  pushDust(x, y) {
+    for (let i = 0; i < 5; i++) {
+      const d = this.add.rectangle(x + Phaser.Math.Between(-4, 4), y + 5, 2, 2, 0xe9dcc0).setDepth(99 + y);
+      this.tweens.add({ targets: d, x: d.x + Phaser.Math.Between(-9, 9), y: d.y - Phaser.Math.Between(2, 6), alpha: 0,
+        duration: 380, ease: "Quad.easeOut", onComplete: () => d.destroy() });
+    }
+  }
+
   ping(x, y) {
     const ring = this.add.circle(x, y, 4).setStrokeStyle(1.5, 0xffd166).setDepth(400);
     this.tweens.add({ targets: ring, scale: 4, alpha: 0, duration: 600, repeat: 2, onComplete: () => ring.destroy() });
+  }
+
+  // 隊友呼叫：呼叫的人頭上跳一個像素風「！」對話泡泡，跟著他走，輕輕上下浮動，停一下再淡出（不閃爍）
+  callMark(x, y, id) {
+    const g = this.add.graphics().setDepth(401);
+    const px = (c, a, b, w, h) => { g.fillStyle(c, 1); g.fillRect(a, b, w, h); };
+    px(0x1d2a36, -6, -8, 12, 12); px(0x1d2a36, -7, -7, 14, 10);   // 外框（切掉四角，像素圓角）
+    px(0xffd166, -5, -7, 10, 10); px(0xffd166, -6, -6, 12, 8);    // 黃色泡泡
+    px(0x1d2a36, -2, 4, 5, 2); px(0x1d2a36, -1, 6, 3, 2);         // 尾巴外框
+    px(0xffd166, -1, 4, 3, 1); px(0xffd166, 0, 5, 1, 1);          // 尾巴
+    px(0x1d2a36, -1, -5, 2, 5); px(0x1d2a36, -1, 1, 2, 2);        // 驚嘆號
+    const top = Math.max(12, y - 20);
+    g.setPosition(Math.round(x), top);
+    if (id && this.objs.players[id]) {             // 跟著呼叫的人：位置在 update() 裡每一格跟上
+      this.callMarks = (this.callMarks || []).filter((m) => m.g.active);
+      this.callMarks.push({ g, id, t0: this.time.now });
+    } else {
+      this.tweens.add({ targets: g, y: top - 2, duration: 450, yoyo: true, repeat: 2, ease: "Sine.easeInOut" });
+    }
+    this.tweens.add({ targets: g, alpha: 0, delay: 2600, duration: 500, onComplete: () => g.destroy() });
+  }
+
+  // 「！」泡泡跟著呼叫的人移動（人離開了就停在最後的位置）
+  followCallMarks() {
+    if (!this.callMarks || !this.callMarks.length) return;
+    this.callMarks = this.callMarks.filter((m) => m.g.active);
+    this.callMarks.forEach((m) => {
+      const o = this.objs.players[m.id];
+      if (!o || !o.active) return;
+      const t = this.time.now - m.t0, bob = t < 2700 ? Math.round(Math.abs(Math.sin(t / 900 * Math.PI)) * 2) : 0;
+      m.g.setPosition(Math.round(o.x), Math.max(12, Math.round(o.y) - 20) - bob);
+    });
   }
 }

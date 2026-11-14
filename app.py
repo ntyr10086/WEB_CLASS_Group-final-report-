@@ -134,6 +134,8 @@ def api_register():
         return jsonify({"error": "帳號要 2～10 個字，只能用中文、英文、數字或底線"}), 400
     if len(pw) < 6:
         return jsonify({"error": "密碼至少 6 個字"}), 400
+    if "confirm" in data and str(data.get("confirm")) != pw:      # 註冊時的「確認密碼」要和密碼一樣
+        return jsonify({"error": "兩次輸入的密碼不一樣"}), 400
     u = db.create_user(name, generate_password_hash(pw))
     if not u:
         return jsonify({"error": "這個帳號已經有人用了"}), 409
@@ -151,6 +153,54 @@ def api_login():
     session.permanent = True
     session["user"] = u["name"]
     return jsonify({"user": public_user(u)})
+
+
+@app.route("/api/password", methods=["POST"])
+def api_password():
+    """修改密碼：要先輸入目前的密碼，新密碼輸入兩次確認"""
+    u = db.find_user(name=me()) if me() else None
+    if not u:
+        return need_login()
+    data = request.get_json(silent=True) or {}
+    old, new, confirm = (str(data.get(k, "")) for k in ("old", "new", "confirm"))
+    if not check_password_hash(u["password_hash"], old):
+        return jsonify({"error": "目前的密碼不對"}), 401
+    if len(new) < 6:
+        return jsonify({"error": "新密碼至少 6 個字"}), 400
+    if new != confirm:
+        return jsonify({"error": "兩次輸入的新密碼不一樣"}), 400
+    if new == old:
+        return jsonify({"error": "新密碼和目前的密碼一樣"}), 400
+    if not db.set_password(u["name"], generate_password_hash(new)):
+        return jsonify({"error": "存檔失敗，請再試一次"}), 500
+    return jsonify({"ok": True})
+
+
+@app.route("/api/rename", methods=["POST"])
+def api_rename():
+    """改帳號名稱（＝遊戲暱稱）：要輸入目前的密碼；在房間裡不能改，免得房間裡的名字對不上"""
+    u = db.find_user(name=me()) if me() else None
+    if not u:
+        return need_login()
+    data = request.get_json(silent=True) or {}
+    new = str(data.get("name", "")).strip()
+    if not check_password_hash(u["password_hash"], str(data.get("password", ""))):
+        return jsonify({"error": "目前的密碼不對"}), 401
+    if not NAME_RE.match(new):
+        return jsonify({"error": "帳號要 2～10 個字，只能用中文、英文、數字或底線"}), 400
+    if new == u["name"]:
+        return jsonify({"error": "新名稱和現在的一樣"}), 400
+    if any(user == u["name"] and sid in sid_room for sid, user in list(sid_user.items())):
+        return jsonify({"error": "先離開房間再改名"}), 409
+    old = u["name"]                                   # 先記下舊名字（記憶體模式改名會直接改到 u）
+    ok, err = db.rename_user(old, new)
+    if not ok:
+        return jsonify({"error": err}), 409
+    for sid, user in list(sid_user.items()):         # 已經連上的連線也換成新名字（好友看到的在線狀態才對）
+        if user == old:
+            sid_user[sid] = new
+    session["user"] = new
+    return jsonify({"user": public_user(db.find_user(name=new))})
 
 
 @app.route("/api/logout", methods=["POST"])
@@ -428,6 +478,16 @@ def on_tutorial():
     room = current_room()
     if not room or room.host != request.sid or room.status in ("playing", "intro"):
         return
+    room.status = "intro"                     # 轉場中：不能重複按開始
+    socketio.emit("intro_loading", to=room.code)
+    socketio.start_background_task(start_tutorial_after_loading, room)
+
+
+def start_tutorial_after_loading(room):
+    """新手教學也先播一小段轉場畫面，再開始"""
+    socketio.sleep(TUTORIAL_LOADING)
+    if room.code not in rooms or room.status != "intro" or not room.players:
+        return                                # 轉場時大家都離開了
     with room.lock:
         room.start(None, mode="tutorial")
         state = room.snapshot()
@@ -435,6 +495,9 @@ def on_tutorial():
     socketio.emit("game_start", state, to=room.code)
     socketio.emit("room_update", room.lobby_info(), to=room.code)
     socketio.start_background_task(game_loop, room)
+
+
+TUTORIAL_LOADING = 2.2                        # 新手教學轉場畫面的秒數
 
 
 @socketio.on("skip_tutorial")
@@ -481,12 +544,23 @@ def on_act_end():
             room.act_end(request.sid)
 
 
+@socketio.on("push")
+def on_push():
+    room = current_room()
+    if room:
+        with room.lock:
+            events = room.push(request.sid)
+        send(events, room)
+
+
 @socketio.on("ping_marker")
 def on_ping(data):
     room = current_room()
     if room:
         room.tut_flags.add("ping")
-        socketio.emit("ping_marker", {"x": data.get("x"), "y": data.get("y")}, to=room.code)
+        who = room.players.get(request.sid, {})
+        socketio.emit("ping_marker", {"x": data.get("x"), "y": data.get("y"),        # from／name：讓隊友知道是誰在呼叫
+                                      "from": request.sid, "name": who.get("name", "隊友")}, to=room.code)
 
 
 @socketio.on("leave_room")

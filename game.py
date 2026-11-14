@@ -17,6 +17,10 @@ WALL_BOTTOM = 64                  # 河堤下緣；水位 0% 時的水線
 GAME_TIME = int(os.getenv("GAME_TIME", 180))
 REACH = 22                        # 互動距離
 PLAYER_R = 5                      # 角色碰撞半徑
+PUSH_REACH = 20                   # 推隊友：多近才推得到
+PUSH_DIST = 28                    # 推隊友：把人推出去多遠（撞到牆、房子就停）
+PUSH_CD = 0.8                     # 推隊友：每次間隔幾秒
+PUSH_SLIDE = 0.25                 # 被推的人滑出去要多久（這段時間不收他自己的位置，免得被拉回原地）
 START_HEARTS = 5
 
 PLAYER_SKINS = ["NinjaBlue", "NinjaRed", "NinjaGreen", "NinjaYellow"]
@@ -42,7 +46,7 @@ STATIONS = [
     {"kind": "truck", "id": "truck", "x": 360, "y": 210, "w": 32, "h": 22},
 ]
 SHELTER_DOOR = (32, 240)
-DECOR_TREES = [(8, 76), (376, 76), (8, 182), (376, 182)]   # 最下排不放樹（會被畫面下緣切掉、擋住招牌）
+DECOR_TREES = [(16, 76), (368, 76), (16, 182), (368, 182)]  # 樹寬 32，中心離邊 16 才不會被畫面左右邊切掉；最下排不放樹（會被畫面下緣切掉、擋住招牌）
 
 # 災情可以出現的位置
 SPOTS = {
@@ -603,7 +607,7 @@ class Room:
                 out.append(self.spawn(c["type"], c["x"], c["y"], picked_by="story"))
         return out
 
-    def close_chapter(self, success, penalty=True):
+    def close_chapter(self, success, penalty=True, at=None):
         ch = self.chapter
         if not ch or ch["status"] != "active":
             return []
@@ -618,7 +622,8 @@ class Room:
             self.coins += ch["bonus"]
             for q in self.players.values():                      # 劇情任務是大家一起完成的，每人都拿到
                 q["stats"]["coins"] += ch["bonus"]
-            out.append(("fx", {"type": "coin", "x": W / 2, "y": 120, "coins": ch["bonus"], "text": "劇情任務完成"}, None))
+            cx, cy = at or (W / 2, 120)                          # 獎勵跳在完成最後一件任務的地方（例如避難所），不是畫面中間的房子
+            out.append(("fx", {"type": "coin", "x": cx, "y": cy, "coins": ch["bonus"], "text": "劇情任務完成"}, None))
         elif penalty:
             self.level = min(100.0, self.level + ch["penalty"])  # 沒準備好的後果：之後更危險
         return out
@@ -630,13 +635,13 @@ class Room:
         return {"title": ch["title"], "theme": ch["theme"], "goal_text": ch["goal_text"], "done": min(ch["done"], ch["need"]),
                 "need": ch["need"], "status": ch["status"], "speaker": ch["speaker"], "goal": ch["goal"]}
 
-    def chapter_progress(self, kind):
+    def chapter_progress(self, kind, at=None):
         ch = self.chapter
         if not ch or ch["status"] != "active" or kind not in ch["goal"]:
             return []
         ch["done"] += 1
         if ch["done"] >= ch["need"]:
-            return self.close_chapter(True)
+            return self.close_chapter(True, at=at)
         return [("chapter", self.chapter_info(), None)]
 
     # ── 劇情片段 ───────────────────────────────────────────
@@ -714,7 +719,7 @@ class Room:
             self.residents = [x for x in self.residents if x["id"] != inc.get("resident")]
             out += self.beat("rescue")
         if self.mode == "normal":
-            out += self.chapter_progress(inc["type"])
+            out += self.chapter_progress(inc["type"], at=(fx_x, fx_y))
         return out
 
     def fail(self, inc):
@@ -735,10 +740,40 @@ class Room:
     # ── 玩家操作 ───────────────────────────────────────────
     def move(self, sid, x, y, d, moving):
         p = self.players.get(sid)
-        if p and self.status == "playing" and time.time() >= p["stun_until"]:
+        if p and self.status == "playing" and time.time() >= p["stun_until"] and time.time() >= p.get("knock_until", 0):
             p["x"] = min(W - PLAYER_R, max(PLAYER_R, float(x)))
             p["y"] = min(H - PLAYER_R, max(WALL_BOTTOM + PLAYER_R, float(y)))
             p["dir"], p["moving"] = int(d) % 4, bool(moving)
+
+    def push(self, sid):
+        """推隊友：把身邊最近的隊友往外推一小段（被推的人手上的東西不會掉，正在按住處理的會中斷）"""
+        p = self.players.get(sid)
+        now = time.time()
+        if not p or self.status != "playing" or now < p["stun_until"] or now < p.get("push_cd", 0):
+            return []
+        others = [q for q in self.players.values()
+                  if q is not p and dist(p["x"], p["y"], q["x"], q["y"]) <= PUSH_REACH]
+        if not others:
+            return []
+        q = min(others, key=lambda o: dist(p["x"], p["y"], o["x"], o["y"]))
+        dx, dy = q["x"] - p["x"], q["y"] - p["y"]
+        d = math.hypot(dx, dy)
+        if d < 1:                                    # 疊在一起：往自己面向的方向推
+            dx, dy = {0: (0, 1), 1: (0, -1), 2: (-1, 0), 3: (1, 0)}[p["dir"]]
+            d = 1
+        ux, uy = dx / d, dy / d
+        fx, fy = q["x"], q["y"]
+        tx, ty = fx, fy
+        for _ in range(int(PUSH_DIST // 2)):         # 一小步一小步推，撞到東西就停
+            nx, ny = tx + ux * 2, ty + uy * 2
+            if self.blocked(nx, ny):
+                break
+            tx, ty = nx, ny
+        p["push_cd"] = now + PUSH_CD
+        q["x"], q["y"], q["work"] = tx, ty, None
+        q["knock_until"] = now + PUSH_SLIDE
+        return [("pushed", {"by": p["id"], "id": q["id"], "fx": round(fx, 1), "fy": round(fy, 1),
+                            "x": round(tx, 1), "y": round(ty, 1)}, None)]
 
     def act(self, sid):
         """按下空白鍵：撿／放／交付／開始按住工作（依這局災難的玩法）"""

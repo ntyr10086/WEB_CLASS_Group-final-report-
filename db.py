@@ -170,7 +170,7 @@ def save_record(room_code, result, events):
            "disaster": result.get("disaster", "typhoon"), "disaster_name": result.get("disaster_name", "颱風淹水"),
            "water": result["water"], "duration_sec": result["duration"],
            "players": [{"name": p["name"], "account": p.get("account"), "fixed": p["fixed"], "items": p["items"],
-                        "title": p["title"]}
+                        "title": p["title"], "earned": p.get("earned", 0)}          # earned：這個人這局賺到的金幣（排行榜用）
                        for p in result["players"]],
            "team": "、".join(p["name"] for p in result["players"]),
            "events": events,
@@ -217,21 +217,39 @@ def recent_records(limit=10):
 
 
 def leaderboard(limit=10):
-    """排行榜：用 aggregate 依分數排序，只取需要的欄位"""
+    """排行榜：比的是「一局結算拿到的金幣」，每個人只取自己最好的一局，所以一人只佔一個名次
+    （有登入的用帳號認人，訪客用名字；舊紀錄沒有個人金幣，就用那局的總金幣）"""
     if _db is not None:
         try:
             pipeline = [
                 {"$match": {"level_id": LEVEL_ID}},
+                {"$unwind": "$players"},
+                {"$project": {"name": "$players.name", "stars": 1, "result": 1, "played_at": 1,
+                              "fixed": {"$ifNull": ["$players.fixed", "$fixed"]},
+                              "score": {"$ifNull": ["$players.earned", "$score"]},
+                              "who": {"$ifNull": ["$players.account", {"$concat": ["guest:", "$players.name"]}]}}},
+                {"$sort": {"score": -1, "played_at": 1}},
+                {"$group": {"_id": "$who", "id": {"$first": "$_id"}, "team": {"$first": "$name"},
+                            "score": {"$first": "$score"}, "stars": {"$first": "$stars"},
+                            "fixed": {"$first": "$fixed"}, "result": {"$first": "$result"},
+                            "played_at": {"$first": "$played_at"}}},
                 {"$sort": {"score": -1, "played_at": 1}},
                 {"$limit": limit},
-                {"$project": {"_id": 0, "id": {"$toString": "$_id"}, "team": 1, "score": 1,
+                {"$project": {"_id": 0, "id": {"$toString": "$id"}, "team": 1, "score": 1,
                               "stars": 1, "fixed": 1, "result": 1}},
             ]
             return list(_db.game_records.aggregate(pipeline))
         except Exception as e:
             print("[db] 查詢失敗：", e)
-    rows = sorted(_mem["game_records"].values(), key=lambda r: -r["score"])[:limit]
-    return [{"id": r["_id"], **{k: r[k] for k in ("team", "score", "stars", "fixed", "result")}} for r in rows]
+    best = {}
+    for r in sorted(_mem["game_records"].values(), key=lambda r: r["played_at"]):
+        for p in r.get("players", []):
+            who = p.get("account") or "guest:" + p["name"]
+            score = p.get("earned", r["score"])
+            if who not in best or score > best[who]["score"]:
+                best[who] = {"id": r["_id"], "team": p["name"], "score": score, "stars": r["stars"],
+                             "fixed": p.get("fixed", r["fixed"]), "result": r["result"]}
+    return sorted(best.values(), key=lambda x: -x["score"])[:limit]
 
 
 def incident_stats():
@@ -396,6 +414,65 @@ def create_user(name, password_hash):
     else:
         _mem["users"][name] = doc
     return doc
+
+
+def set_password(name, password_hash):
+    """修改密碼；成功回傳 True"""
+    if _db is not None:
+        try:
+            return _db.users.update_one({"name": name}, {"$set": {"password_hash": password_hash}}).matched_count == 1
+        except Exception as e:
+            print("[db] 修改密碼失敗：", e)
+            return False
+    u = _mem["users"].get(name)
+    if u is None:
+        return False
+    u["password_hash"] = password_hash
+    return True
+
+
+def rename_user(old, new):
+    """改帳號名稱：帳號本身（戰績、防災基金、建設、好友碼跟著帳號走）、
+    別人好友名單裡的名字、以前每局紀錄上的帳號、新手教學完成的標記，全部換成新名字。回傳 (成功?, 錯誤訊息)"""
+    if find_user(name=new):
+        return False, "這個帳號已經有人用了"
+    if _db is not None:
+        try:
+            if _db.users.update_one({"name": old}, {"$set": {"name": new}}).matched_count != 1:
+                return False, "找不到這個帳號"
+        except Exception as e:                     # unique index 擋下同時搶同一個名字
+            print("[db] 改名失敗：", e)
+            return False, "這個帳號已經有人用了"
+        try:                                       # 別人好友名單裡的舊名字換成新名字
+            for o in list(_db.users.find({"friends": old}, {"friends": 1})):
+                _db.users.update_one({"_id": o["_id"]}, {"$set": {"friends": [new if f == old else f for f in o["friends"]]}})
+        except Exception as e:
+            print("[db] 改名後更新好友名單失敗：", e)
+        try:
+            for r in list(_db.game_records.find({"players.account": old}, {"players": 1})):
+                players = [{**p, "account": new} if p.get("account") == old else p for p in r["players"]]
+                _db.game_records.update_one({"_id": r["_id"]}, {"$set": {"players": players}})
+            if _db.players.find_one({"name": old, "tutorial_done": True}):
+                _db.players.update_one({"name": new}, {"$set": {"tutorial_done": True, "tutorial_at": now()},
+                                                       "$setOnInsert": {"created_at": now(), "games": 0, "wins": 0,
+                                                                        "fixed": 0, "items": 0}}, upsert=True)
+        except Exception as e:
+            print("[db] 改名後更新關聯資料失敗：", e)
+        return True, ""
+    u = _mem["users"].pop(old, None)
+    if u is None:
+        return False, "找不到這個帳號"
+    u["name"] = new
+    _mem["users"][new] = u
+    for other in _mem["users"].values():
+        other["friends"] = [new if f == old else f for f in other.get("friends", [])]
+    for r in _mem["game_records"].values():
+        for p in r.get("players", []):
+            if p.get("account") == old:
+                p["account"] = new
+    if (_mem["players"].get(old) or {}).get("tutorial_done"):
+        mark_tutorial(new)
+    return True, ""
 
 
 def add_friend(name, other):

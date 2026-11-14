@@ -1,6 +1,14 @@
 // 災變大作戰：災難救援隊 — 大廳、HUD、災情單、開場、結算
 const socket = io();
 const $ = (id) => document.getElementById(id);
+// 手機轉橫／轉直：量實際看得到的高度給 CSS 用（舊瀏覽器不支援 dvh 時的備援），轉完再請遊戲畫面重新量一次大小
+function fitViewport() {
+  document.documentElement.style.setProperty("--vh100", `${window.innerHeight}px`);
+  if (window.phaserGame && window.phaserGame.scale) window.phaserGame.scale.refresh();
+}
+fitViewport();
+window.addEventListener("resize", fitViewport);
+window.addEventListener("orientationchange", () => { fitViewport(); setTimeout(fitViewport, 300); setTimeout(fitViewport, 800); });
 const ASSET = "/static/assets/";
 const ITEM_FILES = {
   bag: "Bag", sandbag: "MoneyBag", rake: "Hoe", gloves: "Interact", ring: "Calamari", axe: "Axe",
@@ -184,6 +192,7 @@ function myName() {
 // 新手門檻：完成過教學（存在這台瀏覽器）才能建立或加入隊伍
 const tutorialDone = () => localStorage.getItem("fr-tutorial-done") === "1";
 let soloTutorial = false;
+let tutorialFromLobby = false;           // 這場教學是不是從大廳直接進來的
 function refreshGate() {
   const ok = tutorialDone();
   $("btn-create").disabled = !ok;
@@ -223,8 +232,11 @@ socket.on("error_msg", (d) => { $("lobby-error").textContent = d.message; });
 socket.on("joined", (d) => {
   myId = d.you;
   MAP = d.map; refreshManual();
-  $("lobby-join").classList.add("hidden");
-  $("lobby-room").classList.remove("hidden");
+  tutorialFromLobby = soloTutorial;        // 從大廳按「新手教學」：不顯示房間頁面，結束後回大廳
+  if (!soloTutorial) {
+    $("lobby-join").classList.add("hidden");
+    $("lobby-room").classList.remove("hidden");
+  }
   $("room-code").textContent = d.code;
   ensureGame();                          // 先載入素材，開始時就不用等
   if (soloTutorial) { soloTutorial = false; socket.emit("start_tutorial"); }   // 第一次玩：直接進教學
@@ -346,6 +358,7 @@ socket.on("intro_status", (d) => { $("ready-status").textContent = `已準備 ${
 socket.on("intro_map", (m) => { MAP = m; refreshManual(); });
 
 socket.on("game_start", (s) => {
+  stopLoading();                              // 新手教學沒有開場劇情，轉場畫面在這裡收起來
   dialogQueue.length = 0;
   ensureGame();
   $("lobby").classList.add("hidden");
@@ -365,6 +378,12 @@ socket.on("tutorial_done", (d) => {
   if (scene) { scene.stopAudio(); scene.sfx("success", 0.5); }
   $("tutorial").classList.add("hidden");
   setTimeout(() => {
+    if (tutorialFromLobby) {             // 從大廳進來的教學：結束後離開這個教學房間，回到大廳
+      tutorialFromLobby = false;
+      quitToLobby();
+      socket.emit("leave_room");
+      return;
+    }
     $("game-wrap").classList.add("hidden");
     $("lobby").classList.remove("hidden");
     $("lobby-error").textContent = "";
@@ -534,7 +553,25 @@ socket.on("stun", (d) => {
   if (d.id === myId) scene.cameras.main.shake(150, 0.003);
 });
 
-socket.on("ping_marker", (d) => { if (scene) scene.ping(d.x, d.y); });
+// 推隊友：被推的人照伺服器給的終點滑出去；大家都看到灰塵、聽到一聲
+socket.on("pushed", (d) => {
+  if (!scene) return;
+  scene.pushDust(d.fx, d.fy);
+  scene.sfx("impact", 0.25);
+  if (d.id === myId) scene.knockTo(d.x, d.y);
+});
+const lastCall = {};                      // 同一個隊友連按 Q：3 秒內只提示一次，避免一直跳
+socket.on("ping_marker", (d) => {
+  if (!scene) return;
+  scene.ping(d.x, d.y);
+  if (!d.from || d.from === myId) return;  // 自己按的只看到標記；隊友才跳出提示
+  const now = Date.now();
+  if (now - (lastCall[d.from] || 0) < 3000) return;
+  lastCall[d.from] = now;
+  banner(`${d.name} 呼叫支援！快到黃色標記`);
+  scene.callMark(d.x, d.y, d.from);       // 呼叫的人頭上跳一個「！」符號，跟著他走
+  scene.sfx("alert", 0.4);
+});
 
 // ── 結算 ───────────────────────────────────────────────────
 socket.on("game_over", (r) => {
@@ -562,16 +599,14 @@ socket.on("game_over", (r) => {
   $("result-lessons").innerHTML = (r.lessons || []).map((l) =>
     `<li><b>${l.name}</b>　<span class="tag-ok">解除 ${l.fixed}</span>${l.failed ? `　<span class="tag-bad">失敗 ${l.failed}</span>` : ""}<br>${escapeHtml(l.text)}</li>`)
     .join("") || "<li>這局還沒遇到災情。</li>";
-  $("leaderboard").innerHTML = "";
+  // 排行榜：只排這一局的玩家，比這局結算拿到的金幣（一人一個名次）
+  $("leaderboard").innerHTML = [...(r.players || [])].sort((a, b) => (b.earned || 0) - (a.earned || 0)).map((x) =>
+    `<li><span>${escapeHtml(x.name)}</span><span>${x.earned || 0} 金幣</span></li>`).join("") || "<li>這局沒有玩家</li>";
   $("result").classList.remove("hidden");
 });
 
 socket.on("report_ready", (d) => {
   $("result-report").textContent = d.report;
-  fetch("/api/leaderboard").then((res) => res.json()).then((rows) => {
-    $("leaderboard").innerHTML = rows.map((x) =>
-      `<li><span>${escapeHtml(x.team)}</span><span>${x.score} 金幣 ${"★".repeat(x.stars)}</span></li>`).join("") || "<li>還沒有紀錄</li>";
-  });
 });
 
 // ── 觸控操作：虛擬搖桿 + 拿放鍵（按住＝處理災情）────────────────
@@ -602,6 +637,10 @@ window.touchDir = { x: 0, y: 0 };
     e.preventDefault();
     if (playing && scene) socket.emit("ping_marker", { x: scene.me.x, y: scene.me.y });
   });
+  $("t-push").addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    if (playing) socket.emit("push");
+  });
   document.addEventListener("contextmenu", (e) => { if (e.target.closest(".touch")) e.preventDefault(); });
 })();
 
@@ -631,22 +670,67 @@ function reconnectSocket() {
 api("/api/me").then(({ data }) => setMe(data.user || null));
 
 $("btn-account").onclick = () => {
-  if (!ME) { $("auth-error").textContent = ""; $("auth").classList.remove("hidden"); $("auth-name").focus(); return; }
+  if (!ME) { $("auth-error").textContent = ""; showConfirm(false); $("auth").classList.remove("hidden"); $("auth-name").focus(); return; }
   openAccount();
 };
+let authBusy = false;
+// 註冊才需要「確認密碼」：第一次按「註冊新帳號」先打開這一格，填好再按一次才送出；按登入就收起來
+function showConfirm(on) {
+  $("auth-pw2-row").classList.toggle("hidden", !on);
+  $("auth-show-row").classList.toggle("hidden", !on);      // 註冊時可以勾「顯示密碼」，看清楚自己打了什麼
+  if (!on) { $("auth-pw2").value = ""; showPw(false); }
+}
+function showPw(on) {
+  $("auth-show").checked = on;
+  $("auth-pw").type = $("auth-pw2").type = on ? "text" : "password";
+}
+$("auth-show").addEventListener("change", () => showPw($("auth-show").checked));
 async function doAuth(kind) {
+  if (authBusy) return;                                   // 等伺服器回覆時，再按也不會重複送出
   const body = { name: $("auth-name").value.trim(), password: $("auth-pw").value };
+  if (kind === "login") showConfirm(false);
+  if (kind === "register" && $("auth-pw2-row").classList.contains("hidden")) {
+    showConfirm(true);
+    $("auth-error").textContent = "";
+    (body.name && body.password ? $("auth-pw2") : $(body.name ? "auth-pw" : "auth-name")).focus();
+    return;
+  }
   if (!body.name || !body.password) { $("auth-error").textContent = "帳號和密碼都要填"; return; }
-  const { ok, data } = await api(`/api/${kind}`, { method: "POST", body });
+  if (kind === "register") {
+    body.confirm = $("auth-pw2").value;
+    if (!body.confirm) { $("auth-error").textContent = "請再輸入一次密碼確認"; $("auth-pw2").focus(); return; }
+    if (body.confirm !== body.password) { $("auth-error").textContent = "兩次輸入的密碼不一樣"; $("auth-pw2").focus(); return; }
+  }
+  // 一按下去馬上有反應：按鈕變成「登入中…」並暫時不能按，等伺服器（資料庫、密碼比對）回覆
+  const btn = $(kind === "login" ? "btn-login" : "btn-register"), label = btn.textContent;
+  authBusy = true;
+  $("auth-error").textContent = "";
+  btn.textContent = kind === "login" ? "登入中…" : "註冊中…";
+  $("btn-login").disabled = $("btn-register").disabled = true;
+  let res;
+  try { res = await api(`/api/${kind}`, { method: "POST", body }); }
+  catch (e) { res = { ok: false, data: { error: "連不上伺服器，請再試一次" } }; }
+  authBusy = false;
+  btn.textContent = label;
+  $("btn-login").disabled = $("btn-register").disabled = false;
+  const { ok, data } = res;
   if (!ok) { $("auth-error").textContent = data.error || "出了點問題，再試一次"; return; }
   $("auth-pw").value = "";
+  showConfirm(false);
   $("auth").classList.add("hidden");
   setMe(data.user);
   reconnectSocket();
 }
+// 登入視窗：點旁邊的空白處（或在輸入框裡拖曳選字、放開時滑到外面）不會關掉；
+// 只有登入／註冊成功，或按「先不要，用訪客玩」才關
+$("auth").addEventListener("click", (e) => { if (e.target === $("auth")) e.stopImmediatePropagation(); }, true);
 $("btn-login").onclick = () => doAuth("login");
 $("btn-register").onclick = () => doAuth("register");
-$("auth-pw").addEventListener("keydown", (e) => { if (e.key === "Enter") doAuth("login"); });
+$("auth-pw").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  if ($("auth-pw2-row").classList.contains("hidden")) doAuth("login"); else $("auth-pw2").focus();
+});
+$("auth-pw2").addEventListener("keydown", (e) => { if (e.key === "Enter") doAuth("register"); });
 $("btn-logout").onclick = async () => {
   if (!$("lobby-room").classList.contains("hidden")) { $("friend-msg").textContent = "先離開房間再登出"; return; }
   await api("/api/logout", { method: "POST" });
@@ -667,8 +751,57 @@ function showTab(tab) {
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.dataset.tab === tab));
   $("tab-records").classList.toggle("hidden", tab !== "records");
   $("tab-friends").classList.toggle("hidden", tab !== "friends");
-  if (tab === "records") loadMyRecords(); else loadFriends();
+  $("tab-password").classList.toggle("hidden", tab !== "password");
+  if (tab === "records") loadMyRecords();
+  else if (tab === "friends") loadFriends();
+  else {
+    ["pw-old", "pw-new", "pw-new2", "rn-pw"].forEach((id) => { $(id).value = ""; });
+    $("rn-name").value = ME ? ME.name : ""; setPwMsg(""); setRnMsg("");
+  }
 }
+// 改帳號名稱：輸入新名稱＋目前的密碼；在房間裡不能改（和登出一樣）
+function setRnMsg(text, ok = false) { $("rn-msg").textContent = text; $("rn-msg").classList.toggle("ok", ok); }
+let rnBusy = false;
+async function renameAccount() {
+  if (rnBusy) return;
+  const body = { name: $("rn-name").value.trim(), password: $("rn-pw").value };
+  if (!$("lobby-room").classList.contains("hidden")) return setRnMsg("先離開房間再改名");
+  if (!body.name || !body.password) return setRnMsg("新名稱和目前的密碼都要填");
+  if (ME && body.name === ME.name) return setRnMsg("新名稱和現在的一樣");
+  rnBusy = true; $("btn-rename").disabled = true; $("btn-rename").textContent = "改名中…"; setRnMsg("");
+  let res;
+  try { res = await api("/api/rename", { method: "POST", body }); }
+  catch (e) { res = { ok: false, data: { error: "連不上伺服器，請再試一次" } }; }
+  rnBusy = false; $("btn-rename").disabled = false; $("btn-rename").textContent = "確認改名";
+  if (!res.ok) return setRnMsg(res.data.error || "出了點問題，再試一次");
+  $("rn-pw").value = "";
+  setMe(res.data.user);                       // 右上角、暱稱欄、隊員證標題都換成新名字
+  $("acc-name").textContent = ME.name;
+  reconnectSocket();                          // 讓伺服器的連線也用新名字
+  setRnMsg(`已經改成「${ME.name}」，下次登入請用新名稱`, true);
+}
+$("btn-rename").onclick = renameAccount;
+$("rn-pw").addEventListener("keydown", (e) => { if (e.key === "Enter") renameAccount(); });
+// 修改密碼：目前的密碼＋新密碼輸入兩次
+function setPwMsg(text, ok = false) { $("pw-msg").textContent = text; $("pw-msg").classList.toggle("ok", ok); }
+let pwBusy = false;
+async function changePassword() {
+  if (pwBusy) return;
+  const body = { old: $("pw-old").value, new: $("pw-new").value, confirm: $("pw-new2").value };
+  if (!body.old || !body.new || !body.confirm) return setPwMsg("三格都要填");
+  if (body.new.length < 6) return setPwMsg("新密碼至少 6 個字");
+  if (body.new !== body.confirm) return setPwMsg("兩次輸入的新密碼不一樣");
+  pwBusy = true; $("btn-change-pw").disabled = true; $("btn-change-pw").textContent = "修改中…"; setPwMsg("");
+  let res;
+  try { res = await api("/api/password", { method: "POST", body }); }
+  catch (e) { res = { ok: false, data: { error: "連不上伺服器，請再試一次" } }; }
+  pwBusy = false; $("btn-change-pw").disabled = false; $("btn-change-pw").textContent = "確認修改";
+  if (!res.ok) return setPwMsg(res.data.error || "出了點問題，再試一次");
+  ["pw-old", "pw-new", "pw-new2"].forEach((id) => { $(id).value = ""; });
+  setPwMsg("密碼已經改好了，下次登入請用新密碼", true);
+}
+$("btn-change-pw").onclick = changePassword;
+$("pw-new2").addEventListener("keydown", (e) => { if (e.key === "Enter") changePassword(); });
 document.querySelectorAll(".tab").forEach((t) => { t.onclick = () => showTab(t.dataset.tab); });
 $("btn-copy-code").onclick = () => {
   navigator.clipboard?.writeText(ME.friend_code).then(() => { $("btn-copy-code").textContent = "已複製"; });

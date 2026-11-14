@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>災變大作戰：災難救援隊</title>
+  <!-- 手機像手遊一樣全螢幕：加到主畫面後從圖示打開，沒有網址列（Android 會自動橫放） -->
+  <link rel="manifest" href="{{ asset('manifest.json') }}">
+  <meta name="theme-color" content="#1c1630">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="災變大作戰">
+  <link rel="apple-touch-icon" href="{{ asset('icons/icon-192.png') }}">
   <link rel="stylesheet" href="{{ asset('css/style.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -302,6 +310,8 @@
       <label class="slider">音效<input id="vol-sfx" type="range" min="0" max="100"><span></span></label>
       <label class="slider">雨聲<input id="vol-ambient" type="range" min="0" max="100"><span></span></label>
       <label class="check"><input id="vol-muted" type="checkbox">全部靜音（遊戲中按 M 也可以切換）</label>
+      <button id="btn-fullscreen" class="hidden">全螢幕遊玩</button>
+      <p id="fs-tip" class="fs-tip hidden">iPhone 想要全螢幕：用 Safari 打開這個網址 → 按「分享」→「加入主畫面」，之後從主畫面的圖示打開就是全螢幕。</p>
       <button class="primary modal-close">完成</button>
       <button id="btn-quit" class="quit-btn hidden">退出遊戲，回到大廳</button>
     </div>

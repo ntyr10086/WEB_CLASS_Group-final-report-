@@ -775,3 +775,14 @@ body:has(#tutorial:not(.hidden)) .keys, body:has(#dialog-toast:not(.hidden)) .ke
   .lobby #lobby-room > button:not(.link-btn) { padding: 4px 8px; margin-top: 4px; }
   .credits { display: none; }
 }
+
+/* ════════ 手機全螢幕（像手遊）：設定裡的全螢幕按鈕／iPhone 提示；橫放時遊戲畫面貼齊上下，兩側留給搖桿和按鈕 ════════ */
+#btn-fullscreen { width: 100%; margin-top: 8px; }
+.fs-tip { font-size: 12px; line-height: 1.6; color: #6b5a4a; background: #fff3c4; border: 2px dashed var(--warm); border-radius: 4px; padding: 6px 8px; margin: 8px 0 0; }
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  .stage:has(#game-wrap:not(.hidden)) { padding: 0; }
+  .screen { width: min(100%, calc((var(--vh100, 100vh) - var(--bar) - 4px) * 1.5)); }
+  /* 瀏海／圓角螢幕：搖桿和按鈕往內縮，不被切到 */
+  .joy { left: max(14px, calc(env(safe-area-inset-left) + 8px)); }
+  .touch-btns { right: max(14px, calc(env(safe-area-inset-right) + 8px)); }
+}

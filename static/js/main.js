@@ -8,6 +8,40 @@ function fitViewport() {
 }
 fitViewport();
 window.addEventListener("resize", fitViewport);
+
+// ── 手機像手遊一樣：按下進遊戲的按鈕時自動全螢幕（藏起網址列、狀態列），Android 順便鎖成橫向 ──
+// iPhone 的 Safari 不開放網頁全螢幕，改在設定裡教「加入主畫面」；電腦不受影響
+const isTouch = window.matchMedia("(pointer: coarse)").matches;
+const fsRoot = document.documentElement;
+const canFullscreen = !!(fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen);
+const isInstalled = window.matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches || navigator.standalone === true;
+const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+function enterFullscreen() {
+  if (!isTouch || !canFullscreen || fsElement()) return;
+  try {
+    const req = fsRoot.requestFullscreen ? fsRoot.requestFullscreen({ navigationUI: "hide" }) : fsRoot.webkitRequestFullscreen();
+    Promise.resolve(req).then(() => {
+      if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(() => {});
+    }).catch(() => {});
+  } catch (e) { /* 瀏覽器不讓全螢幕就照原本的樣子玩 */ }
+}
+function exitFullscreen() {
+  try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) {}
+}
+// 進遊戲的按鈕：新手教學、開始遊戲、加入房間、出發、再救一次、好友列表的「加入」
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#btn-first-tutorial, #btn-tutorial, #btn-create, #btn-join, #btn-start, #btn-again, [data-join]")) enterFullscreen();
+}, true);
+function refreshFullscreenUI() {
+  $("btn-fullscreen").classList.toggle("hidden", !isTouch || !canFullscreen || isInstalled);
+  $("btn-fullscreen").textContent = fsElement() ? "離開全螢幕" : "全螢幕遊玩";
+  $("fs-tip").classList.toggle("hidden", !isTouch || canFullscreen || isInstalled);
+  fitViewport();
+}
+document.addEventListener("fullscreenchange", refreshFullscreenUI);
+document.addEventListener("webkitfullscreenchange", refreshFullscreenUI);
+$("btn-fullscreen").onclick = () => { if (fsElement()) exitFullscreen(); else enterFullscreen(); };
+refreshFullscreenUI();
 window.addEventListener("orientationchange", () => { fitViewport(); setTimeout(fitViewport, 300); setTimeout(fitViewport, 800); });
 const ASSET = "/static/assets/";
 const ITEM_FILES = {

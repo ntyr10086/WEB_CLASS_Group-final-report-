@@ -1,7 +1,8 @@
-"""AI 供應層：用 LangChain 把 OpenAI 和 Ollama 包成同一個介面
+"""AI 供應層：用 LangChain 把 OpenAI、Groq 和 Ollama 包成同一個介面
 
 AI_PROVIDER 設定：
-  auto   （預設）有 OPENAI_API_KEY 先用 OpenAI，再試本機 Ollama，都不行就用規則版
+  auto   （預設）依序試 OpenAI → Groq → 本機 Ollama（有設 key 的才會用），都不行就用規則版
+  groq   只用 Groq（免費、速度快，雲端版建議用這個）
   ollama 只用本機 Ollama（課堂 ch7 的做法，不用錢、不用網路）
   openai 只用 OpenAI
   off    全部用規則版
@@ -18,6 +19,8 @@ import urllib.request
 
 PROVIDER = os.getenv("AI_PROVIDER", "auto").strip().lower()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"   # Groq 相容 OpenAI 的 API 格式
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
 OLLAMA_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "20"))   # 本機模型第一次載入比較慢
@@ -49,6 +52,15 @@ def _make_openai():
     return ChatOpenAI(model=OPENAI_MODEL, temperature=0.9, timeout=6, max_retries=0)
 
 
+def _make_groq():
+    key = os.getenv("GROQ_API_KEY")
+    if not key:
+        return None
+    from langchain_openai import ChatOpenAI
+    return ChatOpenAI(model=GROQ_MODEL, api_key=key, base_url=GROQ_BASE_URL,
+                      temperature=0.9, timeout=15, max_retries=0)
+
+
 def _make_ollama():
     ok, msg = _ollama_check()
     status["ollama"] = msg
@@ -68,9 +80,10 @@ def get_chain():
     with _lock:
         if _chain is not None:
             return _chain
-        order = {"auto": ["openai", "ollama"], "openai": ["openai"],
-                 "ollama": ["ollama"], "off": []}.get(PROVIDER, ["openai", "ollama"])
-        makers = {"openai": _make_openai, "ollama": _make_ollama}
+        order = {"auto": ["openai", "groq", "ollama"], "openai": ["openai"],
+                 "groq": ["groq"], "ollama": ["ollama"],
+                 "off": []}.get(PROVIDER, ["openai", "groq", "ollama"])
+        makers = {"openai": _make_openai, "groq": _make_groq, "ollama": _make_ollama}
         _chain = []
         for name in order:
             try:
@@ -133,4 +146,5 @@ def warm_up():
 
 def info():
     return {**status, "openai_model": OPENAI_MODEL if "openai" in status["chain"] else None,
+            "groq_model": GROQ_MODEL if "groq" in status["chain"] else None,
             "ollama_model": OLLAMA_MODEL, "ollama_host": OLLAMA_HOST}
